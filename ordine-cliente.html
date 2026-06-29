@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Ordina — Siculabrioche</title>
+<style>
+:root{
+  --ink:#1a1714; --paper:#f5f2ec; --line:#ddd8ce;
+  --accent:#c84b2f; --green:#2a6e42; --gold:#c49a2a;
+  --radius:10px; --shadow:0 2px 12px rgba(0,0,0,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink);font-size:16px;min-height:100vh;padding-bottom:40px;}
+
+/* HEADER */
+.hdr{background:var(--ink);color:#fff;padding:16px 18px 14px;display:flex;align-items:center;gap:12px;}
+.hdr-logo{font-family:Georgia,serif;font-size:20px;line-height:1.2;}
+.hdr-sub{font-size:11px;opacity:.45;letter-spacing:1px;text-transform:uppercase;margin-top:2px;}
+
+/* STEP INDICATOR — 3 step */
+.steps{display:flex;background:#fff;border-bottom:1px solid var(--line);padding:0 16px;}
+.step{flex:1;padding:10px 4px;text-align:center;font-size:11px;font-weight:600;color:#aaa;border-bottom:3px solid transparent;transition:all .2s;}
+.step.active{color:var(--accent);border-bottom-color:var(--accent);}
+.step.done{color:var(--green);border-bottom-color:var(--green);}
+.step-num{display:block;font-size:18px;font-weight:700;line-height:1.2;}
+
+/* PAGINE */
+.page{display:none;padding:20px 16px;max-width:520px;margin:0 auto;}
+.page.active{display:block;}
+
+/* FORM ELEMENTS */
+.field{margin-bottom:18px;}
+.field label{display:block;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#666;margin-bottom:6px;}
+.field input,.field select,.field textarea{
+  width:100%;padding:14px 16px;border:2px solid var(--line);border-radius:var(--radius);
+  font-size:16px;font-family:inherit;background:#fff;color:var(--ink);
+  -webkit-appearance:none;appearance:none;transition:border-color .15s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);}
+.field .hint{font-size:12px;color:#999;margin-top:5px;line-height:1.4;}
+
+/* CARD BENVENUTO CLIENTE RICONOSCIUTO */
+.welcome-card{
+  background:linear-gradient(135deg,#e8f5ee,#d4eadc);
+  border:2px solid var(--green);border-radius:var(--radius);
+  padding:16px 18px;margin-bottom:20px;display:none;
+}
+.welcome-card .nome{font-family:Georgia,serif;font-size:20px;font-weight:400;color:var(--green);margin-bottom:2px;}
+.welcome-card .dettagli{font-size:12px;color:#3a5a44;}
+.welcome-card .cambia{font-size:12px;color:var(--accent);cursor:pointer;text-decoration:underline;margin-top:6px;display:inline-block;}
+
+/* PRODOTTI */
+.prod-group{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow);}
+.prod-group-hdr{padding:12px 16px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;}
+.prod-group-body{padding:12px 16px 16px;}
+.qty-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.qty-row:last-child{margin-bottom:0;}
+.qty-label{flex:1;font-size:14px;color:#555;}
+.qty-label small{display:block;font-size:11px;color:#aaa;margin-top:1px;}
+.qty-ctrl{display:flex;align-items:center;border:2px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;transition:border-color .15s;}
+.qty-ctrl button{width:42px;height:42px;border:none;background:#f8f8f8;font-size:22px;cursor:pointer;color:var(--ink);font-weight:300;flex-shrink:0;line-height:1;transition:background .1s;}
+.qty-ctrl button:active{background:#e8e0d8;}
+.qty-ctrl input{width:52px;text-align:center;border:none;border-left:1px solid var(--line);border-right:1px solid var(--line);font-size:16px;font-weight:700;padding:0;height:42px;font-family:inherit;background:transparent;-moz-appearance:textfield;}
+.qty-ctrl input::-webkit-inner-spin-button,.qty-ctrl input::-webkit-outer-spin-button{-webkit-appearance:none;}
+.qty-ctrl input:focus{outline:none;}
+.qty-row.has-value .qty-label{color:var(--ink);font-weight:600;}
+.qty-row.has-value .qty-ctrl{border-color:var(--accent);}
+
+/* BOTTONI */
+.btn-primary{
+  display:block;width:100%;padding:16px;text-align:center;
+  background:var(--accent);color:#fff;border:none;border-radius:var(--radius);
+  font-size:17px;font-weight:700;cursor:pointer;margin-top:10px;
+  box-shadow:0 4px 14px rgba(200,75,47,.3);transition:opacity .15s,transform .1s;
+}
+.btn-primary:active{opacity:.88;transform:scale(.98);}
+.btn-secondary{
+  display:block;width:100%;padding:14px;text-align:center;
+  background:transparent;color:#666;border:2px solid var(--line);
+  border-radius:var(--radius);font-size:15px;font-weight:600;cursor:pointer;margin-top:10px;
+}
+.btn-secondary:active{background:#f0ede8;}
+.btn-wa{background:#25d366;box-shadow:0 4px 14px rgba(37,211,102,.3);}
+.btn-email{background:#1a5fa8;box-shadow:0 4px 14px rgba(26,95,168,.3);margin-top:10px;}
+
+/* INFO / AVVISO */
+.info-box{background:#e8f4fd;border:1px solid #90caf9;border-radius:8px;padding:12px 14px;font-size:13px;color:#1a4a7a;margin-bottom:18px;line-height:1.6;}
+.warn-box{background:#fff8e1;border:2px solid #f9c74f;border-radius:8px;padding:10px 14px;font-size:13px;color:#7a5f00;margin-top:8px;display:none;line-height:1.4;}
+.warn-box.vis{display:block;}
+
+/* RIEPILOGO */
+.recap-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);}
+.recap-card h4{font-family:Georgia,serif;font-size:15px;font-weight:400;color:#555;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+.recap-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid #f0ede8;font-size:14px;}
+.recap-row:last-child{border-bottom:none;}
+.recap-row .qty{font-weight:700;color:var(--accent);font-family:monospace;font-size:15px;}
+.recap-empty{color:#aaa;font-style:italic;font-size:13px;text-align:center;padding:10px 0;}
+
+/* MESSAGGIO FINALE */
+.msg-card{background:#fff;border:2px solid var(--green);border-radius:var(--radius);padding:16px;margin-bottom:14px;position:relative;}
+.msg-card h4{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--green);margin-bottom:10px;}
+.msg-card pre{font-family:inherit;font-size:13px;line-height:1.7;white-space:pre-wrap;color:#333;}
+.copia-btn{position:absolute;top:12px;right:12px;padding:5px 12px;background:var(--green);color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:11px 24px;border-radius:20px;font-weight:700;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:999;white-space:nowrap;}
+.toast.vis{opacity:1;}
+
+/* DIVIDER */
+.divider{height:1px;background:var(--line);margin:20px 0;}
+
+/* P.IVA input grande */
+.piva-input{
+  width:100%;padding:18px 16px;border:2px solid var(--line);border-radius:var(--radius);
+  font-size:22px;font-weight:700;font-family:monospace;letter-spacing:2px;text-transform:uppercase;
+  background:#fff;color:var(--ink);text-align:center;-webkit-appearance:none;
+  transition:border-color .15s;
+}
+.piva-input:focus{outline:none;border-color:var(--accent);}
+
+/* FOOTER */
+.footer{text-align:center;padding:24px 16px 0;font-size:11px;color:#bbb;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div>
+    <div class="hdr-logo">🥐 Siculabrioche</div>
+    <div class="hdr-sub">Modulo ordine clienti</div>
+  </div>
+</header>
+
+<div class="steps">
+  <div class="step active" id="step1"><span class="step-num">1</span>Accesso</div>
+  <div class="step" id="step2"><span class="step-num">2</span>Prodotti</div>
+  <div class="step" id="step3"><span class="step-num">3</span>Riepilogo</div>
+</div>
+
+<!-- ══ PAGINA 1: Accesso con P.IVA o codice cliente ══ -->
+<div class="page active" id="page1">
+
+  <!-- Card cliente già riconosciuto (mostrata se ci sono dati salvati) -->
+  <div class="welcome-card" id="welcomeCard">
+    <div class="nome" id="wc-nome">—</div>
+    <div class="dettagli" id="wc-dettagli">—</div>
+    <span class="cambia" onclick="cambiaCliente()">Non sei tu? Cambia →</span>
+  </div>
+
+  <div id="loginForm">
+    <div class="info-box">
+      Inserisci la tua <strong>Partita IVA</strong> o il <strong>codice cliente</strong> comunicato da Siculabrioche.<br>
+      I tuoi dati verranno ricordati per i prossimi ordini 📱
+    </div>
+
+    <div class="field">
+      <label>Partita IVA o Codice cliente *</label>
+      <input class="piva-input" type="text" id="f-piva"
+        placeholder="IT12345678901"
+        maxlength="20"
+        autocomplete="off"
+        autocapitalize="characters"
+        inputmode="text">
+      <div class="hint">Esempio: IT + 11 cifre, oppure il codice che ti abbiamo comunicato (es. CLI042)</div>
+    </div>
+
+    <div class="field" id="nomeField">
+      <label>Ragione sociale / Nome *</label>
+      <input type="text" id="f-nome" placeholder="es. Bar Centrale srl" autocomplete="organization">
+    </div>
+
+    <div class="field">
+      <label>Email <span style="font-weight:400;text-transform:none;letter-spacing:0;">(per ricevere la conferma)</span></label>
+      <input type="email" id="f-email" placeholder="es. ordini@miobar.it" autocomplete="email">
+    </div>
+
+    <div class="field">
+      <label>WhatsApp / Telefono <span style="font-weight:400;text-transform:none;letter-spacing:0;">(opzionale)</span></label>
+      <input type="tel" id="f-tel" placeholder="+39 333 0000000" autocomplete="tel">
+    </div>
+
+    <div class="warn-box" id="warn1">⚠️ Inserisci la Partita IVA o il codice cliente e il nome.</div>
+  </div>
+
+  <button class="btn-primary" onclick="goStep(2)" id="btnStep1">
+    Avanti → Scegli i prodotti 🥐
+  </button>
+
+  <div class="footer">Siculabrioche · Acireale (CT) · ordini@siculabriosce.com</div>
+</div>
+
+<!-- ══ PAGINA 2: Prodotti ══ -->
+<div class="page" id="page2">
+
+  <div class="info-box" id="benvenuto-prod" style="background:#e8f5ee;border-color:#7dc48a;color:#1a4a2a;">
+    Ciao! 👋 Scegli i prodotti e le quantità.
+  </div>
+
+  <!-- BRIOSCIA -->
+  <div class="prod-group">
+    <div class="prod-group-hdr" style="background:#fff8dc;border-bottom:2px solid #d4a800;">
+      <span style="font-size:20px;">🥐</span>
+      <span style="color:#7a5f00;">BRIOSCIA</span>
+    </div>
+    <div class="prod-group-body">
+      <div class="qty-row" data-prod="brioche" data-imb="112">
+        <div class="qty-label">Imballo da 112 pz<small>imballo grande</small></div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="brioche" data-imb="52">
+        <div class="qty-label">Imballo da 52 pz<small>imballo medio</small></div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="brioche" data-imb="26">
+        <div class="qty-label">Imballo da 26 pz<small>imballo piccolo</small></div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MINI -->
+  <div class="prod-group">
+    <div class="prod-group-hdr" style="background:#fde8e6;border-bottom:2px solid #c0392b;">
+      <span style="font-size:20px;">🥖</span>
+      <span style="color:#7a1a0a;">MINI</span>
+    </div>
+    <div class="prod-group-body">
+      <div class="qty-row" data-prod="mini" data-imb="112">
+        <div class="qty-label">Imballo da 112 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="mini" data-imb="52">
+        <div class="qty-label">Imballo da 52 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="mini" data-imb="26">
+        <div class="qty-label">Imballo da 26 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAFFUTELLA -->
+  <div class="prod-group">
+    <div class="prod-group-hdr" style="background:#d5f5e3;border-bottom:2px solid #1a7a4a;">
+      <span style="font-size:20px;">🟢</span>
+      <span style="color:#0e4a2a;">PAFFUTELLA</span>
+    </div>
+    <div class="prod-group-body">
+      <div class="qty-row" data-prod="paffutella" data-imb="112">
+        <div class="qty-label">Imballo da 112 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="paffutella" data-imb="52">
+        <div class="qty-label">Imballo da 52 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="paffutella" data-imb="26">
+        <div class="qty-label">Imballo da 26 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANZOTTA -->
+  <div class="prod-group">
+    <div class="prod-group-hdr" style="background:#f0e5fa;border-bottom:2px solid #7e3bb5;">
+      <span style="font-size:20px;">🟣</span>
+      <span style="color:#4a1a7a;">PANZOTTA</span>
+    </div>
+    <div class="prod-group-body">
+      <div class="qty-row" data-prod="panzotta" data-imb="112">
+        <div class="qty-label">Imballo da 112 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="panzotta" data-imb="52">
+        <div class="qty-label">Imballo da 52 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="panzotta" data-imb="26">
+        <div class="qty-label">Imballo da 26 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BRIOSCIA CHOCO -->
+  <div class="prod-group">
+    <div class="prod-group-hdr" style="background:#f5ece6;border-bottom:2px solid #6b3a1f;">
+      <span style="font-size:20px;">🍫</span>
+      <span style="color:#3a1a0a;">BRIOSCIA CHOCO</span>
+    </div>
+    <div class="prod-group-body">
+      <div class="qty-row" data-prod="choco" data-imb="112">
+        <div class="qty-label">Imballo da 112 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="choco" data-imb="52">
+        <div class="qty-label">Imballo da 52 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="choco" data-imb="26">
+        <div class="qty-label">Imballo da 26 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROMANA -->
+  <div class="prod-group">
+    <div class="prod-group-hdr" style="background:#fce8e0;border-bottom:2px solid #b5451b;">
+      <span style="font-size:20px;">🔴</span>
+      <span style="color:#7a2a0a;">BRIOSCIA ROMANA</span>
+    </div>
+    <div class="prod-group-body">
+      <div class="qty-row" data-prod="romana" data-imb="52">
+        <div class="qty-label">Romana — da 52 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="romanachoco" data-imb="26">
+        <div class="qty-label">Romana Choco — da 26 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALTRI -->
+  <div class="prod-group">
+    <div class="prod-group-hdr" style="background:#f0f0f0;border-bottom:2px solid #999;">
+      <span style="font-size:20px;">➕</span>
+      <span>ALTRI PRODOTTI</span>
+    </div>
+    <div class="prod-group-body">
+      <div class="qty-row" data-prod="grosse48" data-imb="48">
+        <div class="qty-label">Grosse 105g — da 48 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="minipaf" data-imb="112">
+        <div class="qty-label">Mini Paffutelle — da 112 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="babybrioche" data-imb="112">
+        <div class="qty-label">Baby Briosce — da 112 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+      <div class="qty-row" data-prod="babypaf" data-imb="112">
+        <div class="qty-label">Baby Paffutelle — da 112 pz</div>
+        <div class="qty-ctrl"><button onclick="cambiaQty(this,-1)">−</button><input type="number" min="0" value="0" oninput="syncQty(this)"><button onclick="cambiaQty(this,1)">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="warn-box" id="warn2">⚠️ Seleziona almeno un prodotto per continuare.</div>
+  <button class="btn-primary" onclick="goStep(3)">Avanti → Riepilogo ordine ✓</button>
+  <button class="btn-secondary" onclick="goStep(1)">← Torna indietro</button>
+</div>
+
+<!-- ══ PAGINA 3: Riepilogo e invio ══ -->
+<div class="page" id="page3">
+
+  <div class="recap-card">
+    <h4>👤 Chi ordina</h4>
+    <div class="recap-row"><span id="recap-nome" style="font-weight:600;font-size:15px;">—</span></div>
+    <div class="recap-row" style="display:none;" id="recap-piva-row">
+      <span style="color:#888;">P.IVA / Codice</span>
+      <span id="recap-piva" style="font-family:monospace;font-size:13px;">—</span>
+    </div>
+    <div class="recap-row" style="display:none;" id="recap-contatti-row">
+      <span style="color:#888;font-size:12px;" id="recap-contatti">—</span>
+    </div>
+  </div>
+
+  <div class="recap-card">
+    <h4>🛒 Prodotti ordinati</h4>
+    <div id="recap-prodotti"><div class="recap-empty">Nessun prodotto</div></div>
+  </div>
+
+  <!-- Messaggio pronto -->
+  <div class="msg-card">
+    <h4>📋 Messaggio ordine — pronto da inviare</h4>
+    <button class="copia-btn" onclick="copiaMsg()">📋 Copia</button>
+    <pre id="msg-testo"></pre>
+  </div>
+
+  <button class="btn-primary btn-wa" onclick="inviaWA()">
+    💬 Invia via WhatsApp a Siculabrioche
+  </button>
+  <button class="btn-primary btn-email" onclick="inviaEmail()">
+    📧 Invia via Email a Siculabrioche
+  </button>
+  <button class="btn-secondary" onclick="goStep(2)">← Modifica prodotti</button>
+  <button class="btn-secondary" onclick="nuovoOrdine()" style="color:#aaa;border-color:#e0e0e0;font-size:13px;margin-top:6px;">
+    🔄 Nuovo ordine
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Dati prodotti ──
+const PROD_NOMI = {
+  brioche:'BRIOSCIA', mini:'MINI', paffutella:'PAFFUTELLA',
+  panzotta:'PANZOTTA', choco:'BRIOSCIA CHOCO', romana:'BRIOSCIA ROMANA',
+  romanachoco:'ROMANA CHOCO', grosse48:'GROSSE 105g',
+  minipaf:'MINI PAFFUTELLE', babybrioche:'BABY BRIOSCE', babypaf:'BABY PAFFUTELLE',
+};
+
+// ── Storage cliente ──
+const STORAGE_KEY = 'sicbr_cliente_v1';
+
+function salvaCliente(dati){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(dati)); }catch(e){}
+}
+function caricaCliente(){
+  try{ const r=localStorage.getItem(STORAGE_KEY); return r?JSON.parse(r):null; }catch(e){ return null; }
+}
+
+// ── Init: controlla se cliente già salvato ──
+let clienteCorrente = null;
+
+(function init(){
+  const salvato = caricaCliente();
+  if(salvato && salvato.piva && salvato.nome){
+    clienteCorrente = salvato;
+    // Mostra welcome card
+    document.getElementById('wc-nome').textContent = salvato.nome;
+    const det = [salvato.piva, salvato.email, salvato.tel].filter(Boolean).join(' · ');
+    document.getElementById('wc-dettagli').textContent = det;
+    document.getElementById('welcomeCard').style.display = 'block';
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('btnStep1').textContent = 'Avanti → Scegli i prodotti 🥐';
+    // Aggiorna benvenuto prodotti
+    document.getElementById('benvenuto-prod').innerHTML =
+      `Ciao <strong>${salvato.nome.split(' ')[0]}</strong>! 👋 Scegli pure cosa ti serve oggi.`;
+  }
+})();
+
+function cambiaCliente(){
+  clienteCorrente = null;
+  document.getElementById('welcomeCard').style.display = 'none';
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('f-piva').value = '';
+  document.getElementById('f-nome').value = '';
+  document.getElementById('f-email').value = '';
+  document.getElementById('f-tel').value = '';
+  // Rimuove dal localStorage per permettere nuovo accesso
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+}
+
+// Formatta P.IVA in maiuscolo automaticamente
+document.getElementById('f-piva').addEventListener('input', function(){
+  this.value = this.value.toUpperCase().replace(/\s/g,'');
+});
+
+// ── Step navigation ──
+function goStep(n){
+  if(n===2){
+    if(!clienteCorrente){
+      // Valida e salva cliente
+      const piva = document.getElementById('f-piva').value.trim();
+      const nome = document.getElementById('f-nome').value.trim();
+      if(!piva || !nome){
+        mostraWarn('warn1','⚠️ Inserisci la Partita IVA (o codice cliente) e la ragione sociale.');
+        return;
+      }
+      nascondiWarn('warn1');
+      clienteCorrente = {
+        piva,
+        nome: nome.toUpperCase(),
+        email: document.getElementById('f-email').value.trim(),
+        tel:   document.getElementById('f-tel').value.trim(),
+      };
+      salvaCliente(clienteCorrente);
+      // Aggiorna benvenuto
+      document.getElementById('benvenuto-prod').innerHTML =
+        `Ciao <strong>${nome.split(' ')[0]}</strong>! 👋 Scegli pure cosa ti serve oggi.`;
+    }
+  }
+
+  if(n===3){
+    if(!hasProdotti()){
+      mostraWarn('warn2','⚠️ Seleziona almeno un prodotto per continuare.');
+      return;
+    }
+    nascondiWarn('warn2');
+    buildRiepilogo();
+  }
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.step').forEach((s,i)=>{
+    s.classList.remove('active','done');
+    if(i+1<n) s.classList.add('done');
+    if(i+1===n) s.classList.add('active');
+  });
+  document.getElementById('page'+n).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── Quantità ──
+function cambiaQty(btn, delta){
+  const inp = btn.parentElement.querySelector('input');
+  inp.value = Math.max(0,(parseInt(inp.value)||0)+delta);
+  syncQty(inp);
+}
+function syncQty(inp){
+  inp.closest('.qty-row').classList.toggle('has-value',(parseInt(inp.value)||0)>0);
+}
+function hasProdotti(){
+  return [...document.querySelectorAll('.qty-row input')].some(i=>(parseInt(i.value)||0)>0);
+}
+function getProdotti(){
+  const lista=[];
+  document.querySelectorAll('.qty-row').forEach(row=>{
+    const v=(parseInt(row.querySelector('input').value)||0);
+    if(!v) return;
+    lista.push({prod:row.dataset.prod,imb:row.dataset.imb,qty:v,nome:PROD_NOMI[row.dataset.prod]||row.dataset.prod});
+  });
+  return lista;
+}
+
+// ── Riepilogo e messaggio ──
+function buildRiepilogo(){
+  const c = clienteCorrente;
+  const prodotti = getProdotti();
+
+  // Riepilogo visivo
+  document.getElementById('recap-nome').textContent = c.nome;
+  if(c.piva){
+    document.getElementById('recap-piva').textContent = c.piva;
+    document.getElementById('recap-piva-row').style.display = '';
+  }
+  const contatti=[c.email,c.tel].filter(Boolean).join(' · ');
+  if(contatti){
+    document.getElementById('recap-contatti').textContent = contatti;
+    document.getElementById('recap-contatti-row').style.display = '';
+  }
+
+  const prodEl=document.getElementById('recap-prodotti');
+  if(!prodotti.length){
+    prodEl.innerHTML='<div class="recap-empty">Nessun prodotto</div>';
+  } else {
+    prodEl.innerHTML=prodotti.map(p=>
+      `<div class="recap-row"><span>${p.nome} da ${p.imb}</span><span class="qty">× ${p.qty}</span></div>`
+    ).join('');
+  }
+
+  // ── Messaggio strutturato (parsato dall'AI Inbox) ──
+  const totPz = prodotti.reduce((acc,p)=>{
+    const pzImb = {'112':112,'52':52,'26':26,'48':48,'90':90,'20':20,'40':40,'80':80,'pz':1};
+    return acc + p.qty * (pzImb[String(p.imb)] || 1);
+  }, 0);
+
+  let riepilogoProdotti = prodotti.map(p=>`  - ${p.qty} imballo/i da ${p.imb} di ${p.nome}`).join('\n');
+
+  const msg =
+`===ORDINE SICULABRIOCHE===
+Cliente: ${c.nome}
+P.IVA/Cod: ${c.piva}
+${c.email?'Email: '+c.email+'\n':''}${c.tel?'Tel/WA: '+c.tel+'\n':''}
+PRODOTTI:
+${riepilogoProdotti}
+
+Totale stimato: ~${totPz} pz
+===FINE ORDINE===`;
+
+  document.getElementById('msg-testo').textContent = msg.trim();
+}
+
+// ── Invio ──
+const NUMERO_WA_SICULABRIOCHE = '393204228628'; // inserire numero aziendale es. '393931234567'
+const EMAIL_SICULABRIOCHE = 'ordini@siculabriosce.com';
+
+function getMsg(){ return document.getElementById('msg-testo').textContent; }
+
+function inviaWA(){
+  const testo = getMsg();
+  copiaClipboard(testo);
+  const url = NUMERO_WA_SICULABRIOCHE
+    ? `https://wa.me/${NUMERO_WA_SICULABRIOCHE}?text=${encodeURIComponent(testo)}`
+    : `https://wa.me/?text=${encodeURIComponent(testo)}`;
+  mostraToast('✓ Copiato! Apertura WhatsApp…');
+  setTimeout(()=>window.open(url,'_blank'),800);
+}
+
+function inviaEmail(){
+  const testo = getMsg();
+  copiaClipboard(testo);
+  const subj = encodeURIComponent('Ordine — ' + (clienteCorrente?.nome||''));
+  const body = encodeURIComponent(testo);
+  mostraToast('✓ Copiato! Apertura Email…');
+  setTimeout(()=>{ window.location.href=`mailto:${EMAIL_SICULABRIOCHE}?subject=${subj}&body=${body}`; },800);
+}
+
+function copiaMsg(){
+  copiaClipboard(getMsg());
+  mostraToast('✓ Ordine copiato!');
+}
+
+function copiaClipboard(testo){
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(testo).catch(()=>copiaFallback(testo));
+  } else { copiaFallback(testo); }
+}
+function copiaFallback(testo){
+  const ta=document.createElement('textarea');ta.value=testo;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');}catch(e){}
+  document.body.removeChild(ta);
+}
+
+function mostraToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('vis');
+  setTimeout(()=>t.classList.remove('vis'),2800);
+}
+
+function mostraWarn(id,msg){ const el=document.getElementById(id);if(el){el.textContent=msg;el.classList.add('vis');} }
+function nascondiWarn(id){ const el=document.getElementById(id);if(el)el.classList.remove('vis'); }
+
+function nuovoOrdine(){
+  if(!confirm('Fare un nuovo ordine? I prodotti selezionati verranno azzerati.')) return;
+  document.querySelectorAll('.qty-row input').forEach(i=>{i.value=0;i.closest('.qty-row').classList.remove('has-value');});
+  goStep(2); // rimane loggato, torna ai prodotti
+}
+</script>
+</body>
+</html>
