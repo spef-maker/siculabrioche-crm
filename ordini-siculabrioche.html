@@ -1,0 +1,2925 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ordini Siculabrioche</title>
+<style>
+:root {
+  --ink:#1a1714; --paper:#f5f2ec; --white:#fff; --line:#ddd8ce;
+  --line-strong:#b8b0a0; --muted:#8a847a; --accent:#c84b2f;
+  --green:#3a7d52; --green-soft:#d4eadc; --gold:#c49a2a; --gold-soft:#faf0d0;
+  --blue:#2d5fa8; --radius:5px;
+  --font:--apple-system,'Segoe UI',sans-serif;
+  --mono:'SFMono-Regular','Consolas',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink);font-size:13px;}
+
+/* HEADER */
+.hdr{
+  background:var(--ink);color:#fff;padding:0 18px;
+  display:flex;align-items:center;gap:16px;height:48px;
+}
+.hdr h1{font-size:18px;font-weight:400;font-family:Georgia,serif;white-space:nowrap;}
+.hdr .div{flex:1;}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background .3s;}
+.sync-dot.ok{background:#5cb87a;} .sync-dot.saving{background:var(--gold);} .sync-dot.err{background:var(--accent);}
+.sync-lbl{font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.45);letter-spacing:1px;text-transform:uppercase;}
+
+/* TABS */
+.tabs{display:flex;background:#fff;border-bottom:2px solid var(--line);padding:0 18px;gap:0;overflow-x:auto;}
+.tab{padding:11px 18px;border:none;background:transparent;color:var(--muted);font-size:13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;white-space:nowrap;}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* MAIN */
+.main{padding:18px;max-width:none;}
+.panel{display:none;} .panel.active{display:block;}
+
+/* TOOLBAR */
+.tbar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--radius);font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--line-strong);background:#fff;color:var(--ink);white-space:nowrap;transition:background .12s;}
+.btn:hover{background:var(--ink);color:#fff;border-color:var(--ink);}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn.primary:hover{background:#a83a20;}
+.btn.sm{padding:4px 9px;font-size:11px;}
+
+/* GRID TABLE — main order view */
+.grid-wrap{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 320px);border:1px solid var(--line);border-radius:var(--radius);background:#fff;}
+table.grid{border-collapse:collapse;width:100%;}
+table.grid th{
+  background:var(--ink);color:#fff;
+  padding:4px 5px;text-align:center;
+  font-family:var(--mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;
+  white-space:nowrap;border-right:1px solid rgba(255,255,255,.15);
+  position:sticky;top:0;z-index:10;
+}
+table.grid th.left{text-align:left;}
+table.grid th.prod-header{background:#2d2926;font-size:11px;font-weight:700;padding:8px 10px;letter-spacing:1px;top:0;z-index:11;}
+table.grid th.imballo-header{background:#3d3632;font-size:10px;color:rgba(255,255,255,.8);top:33px;z-index:10;}
+/* rowspan=2 headers stay at top:0 and span both rows */
+table.grid thead tr:first-child th[rowspan="2"]{top:0;z-index:12;}
+table.grid th.tot-header{background:#c84b2f;font-size:10px;top:0;z-index:11;}
+table.grid th.diff-header{background:#2d5fa8;font-size:10px;top:0;z-index:11;}
+
+table.grid td{
+  padding:3px 3px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);
+  vertical-align:middle;white-space:nowrap;text-align:center;
+}
+table.grid tr:hover td{background:#faf8f4;}
+table.grid tr.row-hidden{display:none !important;}
+table.grid .client-cell{min-width:220px;font-weight:600;position:sticky;left:0;background:#fff;z-index:5;border-right:2px solid var(--line-strong);}
+table.grid tr:hover .client-cell{background:#faf8f4;}
+/* cod-cell removed - merged into client-cell */
+table.grid tr:hover .client-cell{background:#faf8f4;}
+table.grid thead th.left{z-index:15 !important;left:0;background:var(--ink);}
+
+/* number inputs in grid */
+table.grid .qty-input{
+  width:46px;min-width:46px;text-align:center;
+  border:1px solid var(--line);background:#fafafa;
+  font-size:12px;font-family:var(--mono);color:var(--ink);
+  padding:2px 2px;border-radius:3px;display:block;
+  -moz-appearance:textfield;
+}
+table.grid .qty-input:focus{outline:2px solid var(--accent);background:#fff;border-color:var(--accent);}
+table.grid .qty-input:hover{border-color:var(--accent);}
+table.grid .qty-input::-webkit-inner-spin-button,
+table.grid .qty-input::-webkit-outer-spin-button{-webkit-appearance:none;}
+
+/* totals */
+.tot-cell{background:#fef2ef !important;font-weight:700;font-family:var(--mono);text-align:right;color:var(--accent);}
+.diff-pos{background:#d4eadc !important;font-weight:700;font-family:var(--mono);text-align:right;color:var(--green);}
+.diff-neg{background:#fef2ef !important;font-weight:700;font-family:var(--mono);text-align:right;color:var(--accent);}
+.diff-zero{background:#f5f5f5 !important;font-weight:700;font-family:var(--mono);text-align:right;color:var(--muted);}
+
+/* footer totals row */
+.grid-footer td{background:var(--ink) !important;color:#fff !important;font-weight:700;font-family:var(--mono);text-align:right;padding:6px 8px;border-right:1px solid rgba(255,255,255,.15);}
+.grid-footer .client-cell{background:var(--ink) !important;text-align:left;font-family:Georgia,serif;font-size:13px;letter-spacing:.5px;}
+
+/* PRODUZIONE PANEL */
+.prod-section{margin-bottom:24px;}
+.prod-section h3{font-family:Georgia,serif;font-size:17px;font-weight:400;margin-bottom:12px;border-bottom:1px solid var(--line);padding-bottom:6px;}
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;}
+.prod-card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+.prod-card-hdr{background:var(--ink);color:#fff;padding:8px 12px;font-size:13px;font-weight:600;}
+.prod-card table{width:100%;border-collapse:collapse;}
+.prod-card td{padding:6px 12px;border-bottom:1px solid var(--line);font-size:12px;}
+.prod-card tr:last-child td{border-bottom:none;}
+.prod-card td:last-child{text-align:right;font-weight:700;font-family:var(--mono);}
+.prod-card td:first-child{color:var(--muted);}
+.prod-tot-row td{background:var(--paper);font-weight:700;font-size:13px;}
+
+/* ANAGRAFICA PANEL */
+.anag-tbar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap;}
+.anag-tbar input{padding:7px 10px;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:13px;flex:1;min-width:200px;}
+.anag-table-wrap{overflow-y:auto;max-height:65vh;border:1px solid var(--line);border-radius:var(--radius);}
+table.anag{width:100%;border-collapse:collapse;}
+table.anag th{background:var(--ink);color:#fff;padding:7px 12px;text-align:left;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;position:sticky;top:0;}
+table.anag td{padding:6px 12px;border-bottom:1px solid var(--line);font-size:13px;}
+table.anag tr:hover td{background:#faf8f4;}
+
+/* AUTOCOMPLETE */
+.autocomplete-wrap{position:relative;flex:1;}
+.autocomplete-list{
+  position:absolute;top:100%;left:0;right:0;
+  background:#fff;border:1px solid var(--line-strong);border-top:none;
+  border-radius:0 0 var(--radius) var(--radius);
+  max-height:220px;overflow-y:auto;z-index:200;
+  box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+.autocomplete-list .ac-item{
+  padding:7px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--line);
+}
+.autocomplete-list .ac-item:hover,.autocomplete-list .ac-item.sel{background:var(--accent-soft,#fef2ef);}
+.autocomplete-list .ac-item .ac-cod{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:8px;}
+
+/* ADD ROW FORM */
+.add-row-form{
+  display:flex;gap:8px;align-items:center;padding:10px 14px;
+  background:var(--gold-soft);border-top:2px solid var(--gold);flex-wrap:wrap;
+}
+.add-row-form .ac-input{
+  padding:7px 10px;border:1px solid var(--line-strong);border-radius:var(--radius);
+  font-size:13px;background:#fff;width:260px;
+}
+
+/* IMPOSTAZIONI PRODUZIONE */
+.prod-settings{
+  display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap;
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;
+}
+.prod-settings label{
+  display:flex;align-items:center;gap:6px;font-family:var(--mono);
+  font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);
+}
+.prod-settings input[type=number]{
+  padding:5px 8px;border:1px solid var(--line-strong);border-radius:4px;
+  width:80px;font-size:13px;font-family:var(--mono);
+}
+
+/* LOADING */
+.loading{
+  display:none;position:fixed;inset:0;background:rgba(245,242,236,.85);z-index:9999;
+  align-items:center;justify-content:center;
+}
+.loading.vis{display:flex;}
+.loading-box{
+  background:#fff;border:1px solid var(--line);border-radius:var(--radius);
+  padding:32px 40px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:16px;color:var(--muted);
+}
+.spinner{width:32px;height:32px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.empty{text-align:center;padding:48px;color:var(--muted);font-style:italic;}
+
+/* Production layout */
+.prod-date-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--ink);flex-wrap:wrap;gap:8px;
+}
+.prod-date-header h3{font-family:Georgia,serif;font-size:18px;font-weight:400;margin:0;}
+.btn-print-date{padding:5px 12px;font-size:12px;}
+
+.prod-summary-row{
+  display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;
+}
+.prod-mini-card{
+  background:#fff;border:1px solid var(--line);border-radius:5px;overflow:hidden;min-width:80px;text-align:center;
+}
+.prod-mini-label{
+  padding:3px 6px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.5px;color:#fff;
+}
+.prod-mini-val{
+  font-family:Georgia,serif;font-size:22px;padding:4px 8px 0;line-height:1.1;
+}
+.prod-mini-sub{font-size:10px;color:var(--muted);padding:2px 6px 6px;}
+
+.print-client-table{overflow-x:auto;margin-bottom:28px;}
+.print-table{width:100%;border-collapse:collapse;}
+.print-table th,.print-table td{padding:4px 6px;border:1px solid #ccc;vertical-align:middle;}
+.print-table th{text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
+.print-table td{font-size:11px;}
+
+.print-section{margin-bottom:32px;}
+
+/* Print CSS */
+.print-only{display:none;}
+
+@media print{
+  details{display:none !important;} /* nascondi dettaglio clienti in stampa, mostra solo tabella riepilogativa */
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  body{background:#fff;font-size:10px;margin:0;}
+  .hdr,.tabs,.tbar,.add-row-form,#noClientsBanner,#briocheCounter,
+  #recentOrderAlert,.no-print{display:none!important;}
+
+  /* When printing single date */
+  body.printing-single .prod-section{display:none!important;}
+  body.printing-single .prod-section.print-active{display:block!important;}
+
+  .prod-date-header{border-bottom:2px solid #000;margin-bottom:10px;}
+  .prod-date-header h3{font-size:14px;}
+  .prod-mini-card{display:none;}
+  .print-only{display:block!important;}
+  .print-summary{margin-bottom:10px;}
+  .print-summary .print-table{font-size:10px;}
+  .print-summary .print-table th,.print-summary .print-table td{padding:3px 5px;}
+
+  .print-client-table{overflow:visible;}
+  .print-table{font-size:8px;page-break-inside:avoid;}
+  .print-table th,.print-table td{padding:2px 3px;}
+
+  .print-section{page-break-after:always;margin-bottom:0;}
+  .print-section:last-child{page-break-after:avoid;}
+
+  /* A4 portrait optimizations */
+  @page{size:A4 landscape;margin:6mm 6mm 6mm 6mm;}
+  table.grid .qty-input{width:32px !important;min-width:32px !important;font-size:9px !important;padding:1px !important;}
+  table.grid td{padding:2px 2px !important;font-size:9px;}
+  table.grid th{padding:2px 3px !important;font-size:8px !important;}
+  table.grid .client-cell{min-width:120px !important;font-size:9px;}
+  .prod-mini-card{min-width:60px !important;}
+  .prod-mini-val{font-size:16px !important;}
+  .prod-mini-sub{font-size:8px !important;}
+
+  /* Company header on print */
+  .main::before{
+    content:'Siculabrioche · Foglio di Produzione';
+    display:block;
+    font-family:Georgia,serif;
+    font-size:16px;
+    font-weight:400;
+    border-bottom:2px solid #000;
+    padding-bottom:6px;
+    margin-bottom:14px;
+  }
+}
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+
+</head>
+<body>
+
+<header class="hdr">
+  <h1>Siculabrioche · Ordini</h1>
+  <div class="div"></div>
+  <span class="sync-dot" id="syncDot"></span>
+  <span class="sync-lbl" id="syncLbl">–</span>
+</header>
+
+<nav class="tabs">
+  <button class="tab active" data-tab="ordini">📋 Ordini</button>
+  <button class="tab" data-tab="produzione">🏭 Produzione</button>
+  <button class="tab" data-tab="anagrafica">👥 Anagrafica</button>
+  <button class="tab" data-tab="storico">🔍 Storico cliente</button>
+  <button class="tab" data-tab="confezionamento">📦 Confezionamento</button>
+</nav>
+
+<div class="main">
+
+  <!-- ── ORDINI ── -->
+  <div class="panel active" id="tab-ordini">
+    <div class="tbar">
+      <button class="btn primary" id="btnAddRow">+ Aggiungi cliente</button>
+      <button class="btn" id="btnNewSession">🗓 Nuova sessione</button>
+      <select id="sessionSelector" style="padding:7px 10px;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:13px;background:#fff;max-width:260px;">
+        <option value="">— Sessioni precedenti —</option>
+      </select>
+      <button class="btn" id="btnDeleteSession" title="Elimina sessione corrente" style="color:var(--accent);">🗑 Elimina sessione</button>
+      <button class="btn" id="btnDeleteEmptySessions" title="Elimina tutte le sessioni senza clienti" style="color:#888;">🗑 Elimina sessioni vuote</button>
+      <button class="btn" id="btnPurgeByDate" title="Elimina sessioni per intervallo di date" style="color:#c0392b;">🧹 Pulizia per data</button>
+      <button class="btn" id="btnExportPdf">Esporta PDF</button>
+      <button class="btn" id="btnBackup">💾 Backup JSON</button>
+      <label class="btn" for="btnRestore" style="cursor:pointer;">📂 Ripristina JSON</label>
+      <input type="file" id="btnRestore" accept=".json" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;">
+      <span style="flex:1"></span>
+      <!-- sessionDate nascosto ma ancora usato internamente -->
+      <input type="date" id="sessionDate" style="display:none;">
+    </div>
+    <!-- Barra operatore e filtro data lavorazione -->
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:7px 14px;background:#f5f5f5;border-bottom:1px solid var(--line);font-size:13px;">
+      <span id="operatorLabel" style="font-family:var(--mono);font-size:11px;color:var(--muted);">👤 <strong id="operatorName">—</strong></span>
+      <button class="btn" id="btnChangeOperator" style="font-size:11px;padding:3px 8px;">Cambia operatore</button>
+      <span style="border-left:1px solid var(--line);height:20px;margin:0 4px;"></span>
+      <label style="display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;">
+        Filtra per data lav.:
+        <input type="date" id="gridFilterDateInput" style="padding:4px 7px;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:12px;">
+        <button id="btnApplyGridFilter" style="padding:3px 8px;border:1px solid var(--green);border-radius:4px;background:var(--green);color:#fff;cursor:pointer;font-size:11px;font-weight:700;">Filtra</button>
+      </label>
+      <button class="btn" id="btnClearGridFilter" style="font-size:11px;padding:3px 8px;">✕ Tutti</button>
+      <span id="gridFilterInfo" style="font-size:11px;color:var(--accent);font-weight:600;display:none;">⚠️ Filtro attivo — non tutti i clienti sono visibili</span>
+    </div>
+    <div id="noClientsBanner" style="display:none;background:#faf0d0;border:1px solid #c49a2a;border-radius:5px;padding:12px 16px;margin-bottom:14px;font-size:13px;">
+      ⚠️ <strong>Anagrafica vuota</strong> — Vai alla tab <strong>👥 Anagrafica</strong> e carica il file <code>clienti.csv</code> prima di inserire ordini.
+    </div>
+
+    <!-- Contatore brioche disponibili -->
+    <div id="briocheCounter" style="background:#fff8dc;border:2px solid #d4a800;border-radius:6px;padding:12px 18px;margin-bottom:14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <span style="font-family:Georgia,serif;font-size:16px;font-weight:400;">🥐 Briosce disponibili:</span>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);">
+        Produzione totale
+        <input type="number" id="briocheTotale" min="0" placeholder="0"
+          style="width:90px;padding:6px 8px;border:1px solid #d4a800;border-radius:4px;font-size:15px;font-family:var(--mono);font-weight:700;text-align:center;background:#fff;">
+      </label>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:13px;color:var(--muted);">Ordinate per questa data:</span>
+        <span id="briocheOrdinate" style="font-family:var(--mono);font-size:18px;font-weight:700;color:#d4a800;">0</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;border-left:2px solid #d4a800;padding-left:18px;">
+        <span style="font-size:13px;color:var(--muted);">Rimanenti:</span>
+        <span id="briocheRimanenti" style="font-family:Georgia,serif;font-size:24px;font-weight:400;">—</span>
+      </div>
+
+      <!-- Valori predefiniti per la sessione -->
+      <div style="border-left:2px solid #d4a800;padding-left:18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <span style="font-family:Georgia,serif;font-size:14px;color:var(--muted);">Predefiniti sessione:</span>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);">
+          Lotto
+          <input type="text" id="defaultLotto" placeholder="es. 123" maxlength="20"
+            style="width:70px;padding:5px 7px;border:1px solid #d4a800;border-radius:4px;font-size:13px;font-family:var(--mono);text-align:center;background:#fff;">
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);">
+          Data ric.
+          <input type="date" id="defaultDataRic"
+            style="padding:5px 7px;border:1px solid #d4a800;border-radius:4px;font-size:12px;background:#fff;">
+        </label>
+        <label style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);">
+          Data lav.
+          <input type="date" id="defaultDataLav"
+            style="padding:5px 7px;border:1px solid #d4a800;border-radius:4px;font-size:12px;background:#fff;">
+        </label>
+        <button class="btn" id="btnApplyDefaults" style="font-size:12px;padding:5px 10px;">↓ Applica a tutte le righe</button>
+        <button class="btn" id="btnAddPers" style="font-size:12px;padding:5px 10px;background:#4a2d6b;color:#fff;border-color:#4a2d6b;">🏷 Gestisci personalizzazioni</button>
+      </div>
+    </div>
+
+    <!-- Alert ordine recente (hidden by default) -->
+    <div id="recentOrderAlert" style="display:none;background:#fde8e6;border:2px solid #c84b2f;border-radius:6px;padding:12px 18px;margin-bottom:14px;font-size:13px;">
+    </div>
+
+    <!-- Add client row (hidden by default) -->
+    <div class="add-row-form" id="addRowForm" style="display:none;">
+      <div class="autocomplete-wrap" id="acWrap">
+        <input type="text" class="ac-input" id="acInput" placeholder="Cerca cliente per nome o codice…" autocomplete="off">
+        <div class="autocomplete-list" id="acList" style="display:none;"></div>
+      </div>
+      <button class="btn primary" id="btnConfirmAdd">Aggiungi</button>
+      <button class="btn" id="btnCancelAdd">Annulla</button>
+    </div>
+
+    <div class="grid-wrap" id="gridWrap">
+      <div class="empty" id="gridEmpty">Nessun ordine. Clicca "+ Aggiungi cliente" per iniziare.</div>
+    </div>
+  </div>
+
+  <!-- ── PRODUZIONE ── -->
+  <div class="panel" id="tab-produzione">
+    <div class="prod-settings no-print" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <label style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:flex;align-items:center;gap:8px;">
+        Filtra per data lavorazione:
+        <input type="date" id="prodFilterDate" style="padding:6px 8px;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:13px;background:#fff;">
+      </label>
+      <label style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:flex;align-items:center;gap:8px;">
+        Corriere:
+        <select id="prodFilterCorriere" style="padding:6px 10px;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:13px;background:#fff;">
+          <option value="">Tutti</option>
+          <option value="BRT">BRT</option>
+          <option value="GLS">GLS</option>
+          <option value="SDA">SDA</option>
+          <option value="TNT">TNT</option>
+          <option value="DHL">DHL</option>
+          <option value="Ritiro">Ritiro</option>
+          <option value="__vuoto__">— Non specificato</option>
+        </select>
+      </label>
+      <button class="btn" id="btnProdClearFilter">Mostra tutto</button>
+      <button class="btn primary" id="btnPrintProd">🖨️ Stampa</button>
+    </div>
+    <div id="prodContent"><div class="empty">Aggiungi ordini per vedere il riepilogo produzione.</div></div>
+  </div>
+
+  <!-- ── ANAGRAFICA ── -->
+  <div class="panel" id="tab-anagrafica">
+    <div class="anag-tbar">
+      <input type="text" id="anagSearch" placeholder="Cerca per nome o codice…">
+      <label class="btn primary" for="anagUpload">📁 Carica file clienti (CSV)</label>
+      <input type="file" id="anagUpload" accept=".csv,.txt" style="display:none;">
+      <button class="btn" id="btnAddClient">+ Nuovo cliente</button>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--muted);" id="anagCount"></span>
+    </div>
+    <div id="firstRunBanner" style="display:none;background:#faf0d0;border:1px solid #c49a2a;border-radius:5px;padding:14px 18px;margin-bottom:14px;font-size:13px;line-height:1.7;">
+      <strong>👋 Prima configurazione</strong> — Nessun cliente in anagrafica.<br>
+      Clicca <strong>"📁 Carica file clienti (CSV)"</strong> e seleziona il file <code>clienti.csv</code> che hai scaricato.<br>
+      I clienti verranno salvati nel browser. Usa "Backup dati" per condividerli.
+    </div>
+    <div class="anag-table-wrap">
+      <table class="anag">
+        <thead><tr><th>Codice</th><th>Ragione Sociale</th><th></th></tr></thead>
+        <tbody id="anagBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── STORICO CLIENTE ── -->
+  <div class="panel" id="tab-storico">
+    <div class="tbar">
+      <div class="autocomplete-wrap" style="max-width:400px;">
+        <input type="text" id="storicoInput" placeholder="Cerca cliente per nome o codice…"
+          autocomplete="off"
+          style="width:100%;padding:8px 12px;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:14px;">
+        <div class="autocomplete-list" id="storicoList" style="display:none;"></div>
+      </div>
+      <button class="btn primary" id="btnStoricoSearch">🔍 Cerca storico</button>
+      <button class="btn" id="btnStoricoClear">✕ Pulisci</button>
+    </div>
+    <div id="storicoContent"><div class="empty">Cerca un cliente per vedere tutti i suoi ordini.</div></div>
+  </div>
+
+  <!-- ── CONFEZIONAMENTO ── -->
+  <div class="panel" id="tab-confezionamento">
+    <div class="prod-settings no-print" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
+      <label style="font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);display:flex;align-items:center;gap:8px;">
+        Filtra per data spedizione:
+        <input type="date" id="confFilterDate" style="padding:6px 8px;border:1px solid var(--line-strong);border-radius:var(--radius);font-size:13px;background:#fff;">
+      </label>
+      <button class="btn" id="btnConfClearFilter">Mostra tutto</button>
+      <button class="btn primary" id="btnPrintConf">🖨️ Stampa</button>
+    </div>
+    <div id="confContent"><div class="empty">Nessun ordine inserito.</div></div>
+  </div>
+
+</div>
+
+<div class="loading vis" id="loading">
+  <div class="loading-box"><div class="spinner"></div><div>Connessione…</div></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// FIREBASE CONFIG
+// ══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyB08NmunQbwid4W4bZIBdAE3Kd-0P5Mih8",
+  authDomain:        "turni-lavoro-543c6.firebaseapp.com",
+  databaseURL:       "https://turni-lavoro-543c6-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "turni-lavoro-543c6",
+  storageBucket:     "turni-lavoro-543c6.firebasestorage.app",
+  messagingSenderId: "360806251809",
+  appId:             "1:360806251809:web:e75e583630d2d9d14b1260"
+};
+
+// ══════════════════════════════════════════
+// PRODOTTI + IMBALLI
+// ══════════════════════════════════════════
+let PERSONALIZZAZIONI = ["Francese","Spagnola","Tedesco","Inglese","Rumena","Polacco","Romana","Romana Cioccolato","Cartone Neutro","Briosce chiare","120 Giorni","AntonioSabato","Anzile","AranciaDOOC","Australia","BaciSottozero","ConoArtic","DeltItalia","DolceVita","DonCannolo","DonGelato","Elios","EtnaFood","Fainello","FoodInSicily","Frisenda","GelatoSicily","GeloDOC","Gioventi","Gocce","GranitaDiBiancaFra","Ice&Co","Il Pane","IlPistacchio","InterFood","LaMadia","L'Uliveto","Maison Belli","MastroPistacchio","Mirtillo","Mister Mukka","Muno","Nonna Maria","Puro","Sabadi'","SanoSiciliano","Scalcione","Seminara","SiciliaGeneral","Sicilu","SicilyAddict","SigiGel","Soldano","Spa Amor Gelato","Tentazioni","VerySicily","Vucciri","Yo.Pi"];
+const IMBALLO_LABELS = { gross8:'GR.8', camp:'CAMP.', pz:'PZ' };
+function imbLabel(imb){ return IMBALLO_LABELS[imb] || imb; }
+
+const PRODUCTS = [
+  { id:'brioche',    name:'BRIOSCIA',          imballi:[112,52,26,'gross8','camp'],                  pz_per_imballo:{112:112,52:52,26:26,gross8:80,camp:8},          unit:'imballi', color:'#d4a800', colorLight:'#fff8dc' },
+  { id:'mini',       name:'MINI',              imballi:[112,52,26],           pz_per_imballo:{112:112,52:52,26:26},                  unit:'imballi', color:'#c0392b', colorLight:'#fde8e6' },
+  { id:'paffutella', name:'PAFFUTELLA',        imballi:[26,52,112,20,40,80],  pz_per_imballo:{26:26,52:52,112:112,20:20,40:40,80:80}, unit:'imballi', color:'#1a7a4a', colorLight:'#e0f5ea',
+    colorByImb:{26:'#2ecc71',52:'#2ecc71',112:'#2ecc71', 20:'#145a32',40:'#145a32',80:'#145a32'},
+    colorLightByImb:{26:'#d5f5e3',52:'#d5f5e3',112:'#d5f5e3', 20:'#a9dfbf',40:'#a9dfbf',80:'#a9dfbf'} },
+  { id:'panzotta',   name:'PANZOTTA',          imballi:[112,52,26],           pz_per_imballo:{112:112,52:52,26:26},          unit:'imballi', color:'#7e3bb5', colorLight:'#f0e5fa' },
+  { id:'choco',      name:'BRIOSCIA CHOCO',    imballi:[112,52,26],           pz_per_imballo:{112:112,52:52,26:26},                  unit:'imballi', color:'#6b3a1f', colorLight:'#f5ece6' },
+  { id:'romana',     name:'BRIOSCIA ROMANA',   imballi:[52],                  pz_per_imballo:{52:52},                               unit:'imballi', color:'#b5451b', colorLight:'#fce8e0' },
+  { id:'romanachoco',name:'ROMANA CHOCO',       imballi:[26],                  pz_per_imballo:{26:26},                               unit:'imballi', color:'#7a2e10', colorLight:'#f7ddd5' },
+  { id:'romanamini', name:'ROMANA MINI',        imballi:[26],                  pz_per_imballo:{26:26},                               unit:'imballi', color:'#c0602a', colorLight:'#fde8d8' },
+  { id:'grosse48',   name:'GROSSE 105g',        imballi:[48,90],               pz_per_imballo:{48:48,90:90},                         unit:'imballi', color:'#b87c1a', colorLight:'#fdf0d0' },
+  { id:'minipaf',    name:'MINI PAFFUTELLE',     imballi:[112],                 pz_per_imballo:{112:112},                             unit:'imballi', color:'#27a060', colorLight:'#d0f0e0' },
+  { id:'babybrioche',name:'BABY BRIOSCE',        imballi:[112],                 pz_per_imballo:{112:112},                             unit:'imballi', color:'#e06030', colorLight:'#fde0d0' },
+  { id:'babypaf',    name:'BABY PAFFUTELLE',     imballi:[112],                 pz_per_imballo:{112:112},                             unit:'imballi', color:'#208050', colorLight:'#c8ecd8' },
+  { id:'sablu_brioche', name:'BRIOSCIA pz',      imballi:['pz'],                pz_per_imballo:{pz:1},                                unit:'pz',      color:'#d4a800', colorLight:'#fff8dc' },
+  { id:'sablu_mini',    name:'MINI pz',           imballi:['pz'],                pz_per_imballo:{pz:1},                                unit:'pz',      color:'#c0392b', colorLight:'#fde8e6' },
+  { id:'sablu_paf',     name:'PAFFUTELLA pz',     imballi:['pz'],                pz_per_imballo:{pz:1},                                unit:'pz',      color:'#1a7a4a', colorLight:'#d5f5e3' },
+  { id:'sablu_panzotta',name:'PANZOTTA pz',       imballi:['pz'],                pz_per_imballo:{pz:1},                                unit:'pz',      color:'#7e3bb5', colorLight:'#f0e5fa' },
+  { id:'sablu_choco',   name:'CHOCO pz',          imballi:['pz'],                pz_per_imballo:{pz:1},                                unit:'pz',      color:'#6b3a1f', colorLight:'#f5ece6' },
+  { id:'lat_mandorla',  name:'LAT. MANDORLA',   imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#1565a8', colorLight:'#e3edf8' },
+  { id:'lat_pistacchio',name:'LAT. PISTACCHIO',  imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#1a6b2a', colorLight:'#d4eadc' },
+  { id:'lat_caffe',     name:'LAT. CAFFÈ',       imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#5a3010', colorLight:'#ede0d4' },
+  { id:'lat_nocciola',  name:'LAT. NOCCIOLA',    imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#8b5e2a', colorLight:'#f5e8d4' },
+  { id:'pura_pistacchio',name:'PURA PIST.',      imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#2d6e3a', colorLight:'#c8e6cc' },
+  { id:'pura_mandorla', name:'PURA MAND.',       imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#c47c00', colorLight:'#fff3e0' },
+  { id:'pura_nocciola', name:'PURA NOCC.',       imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#a0620a', colorLight:'#faebd0' },
+  { id:'paste_mand6',  name:'PASTE MAND. 6',   imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#d4821a', colorLight:'#fef0d8' },
+  { id:'frutta_mart',  name:'FRUTTA MART.',     imballi:['pz'], pz_per_imballo:{pz:1}, unit:'pz', color:'#c03a6a', colorLight:'#fce0ea' },
+];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let clients = [];       // [{cod, nome}]
+let orders = {};        // sessionId → { date, rows: [{clientCod, clientNome, qtys:{brioche:{112:0,...},...}}] }
+let currentSession = null;
+let notifyChange = ()=>{};
+let currentOperator = '';  // nome operatore corrente
+let gridFilterDate = '';   // filtro data lavorazione nella griglia
+let anagPage = 0;
+const ANAG_PAGE_SIZE = 100;
+let filteredClients = [];
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function uid(){ return 'r_'+Date.now()+'_'+Math.random().toString(36).slice(2,6); }
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function dateToStr(d){ return d.toISOString().slice(0,10); }
+function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function calcPzRow(row){
+  let tot = 0;
+  PRODUCTS.forEach(p=>{
+    (p.imballi).forEach(imb=>{
+      const v = parseInt((row.qtys||{})[p.id]?.[imb]||0);
+      tot += v * p.pz_per_imballo[imb];
+    });
+  });
+  return tot;
+}
+
+function setSyncStatus(cls,msg){
+  document.getElementById('syncDot').className='sync-dot '+cls;
+  document.getElementById('syncLbl').textContent=msg;
+}
+
+// ══════════════════════════════════════════
+// SESSION MANAGEMENT
+// ══════════════════════════════════════════
+function cleanEmptySessions(){
+  // Elimina automaticamente tutte le sessioni con 0 clienti tranne quella corrente
+  let changed = false;
+  Object.keys(orders).forEach(k=>{
+    if(k === currentSession) return; // non eliminare mai quella attiva
+    if(!(orders[k].rows||[]).length){
+      delete orders[k];
+      changed = true;
+    }
+  });
+  if(changed){
+    renderSessionSelector();
+    renderProduzione();
+    renderConfezionamento();
+  }
+}
+
+function ensureSession(){
+  if(currentSession && orders[currentSession]) return;
+  const date = document.getElementById('sessionDate').value || todayStr();
+  // Try to find an existing session for this date
+  const existing = Object.keys(orders).find(k=> orders[k].date === date);
+  if(existing){
+    currentSession = existing;
+  } else {
+    currentSession = 'ses_'+date.replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,6);
+    orders[currentSession] = { date, rows:[] };
+  }
+}
+
+function getSession(){
+  ensureSession();
+  return orders[currentSession];
+}
+
+function renderSessionSelector(){
+  const sel = document.getElementById('sessionSelector');
+  if(!sel) return;
+
+  const sessions = Object.entries(orders)
+    .map(([id, ses]) => ({ id, date: ses.date||'', rows: (ses.rows||[]).length }))
+    .sort((a,b) => b.date.localeCompare(a.date));
+
+  if(sessions.length <= 1){
+    sel.innerHTML = '<option value="">— Nessuna sessione precedente —</option>';
+    if(sessions.length === 1){
+      const s = sessions[0];
+      sel.innerHTML = `<option value="${s.id}" selected>${fmtDateSimple(s.date)} (${s.rows} clienti) ◀ corrente</option>`;
+    }
+  } else {
+    sel.innerHTML = sessions.map(s => {
+      const label = s.date ? fmtDateSimple(s.date) : 'Senza data';
+      const isCurrent = s.id === currentSession;
+      return `<option value="${s.id}" ${isCurrent?'selected':''}>${label} · ${s.rows} clienti${isCurrent?' ◀':''}</option>`;
+    }).join('');
+  }
+
+  // Sync date picker to current session date
+  const ses = currentSession && orders[currentSession];
+  if(ses && ses.date) document.getElementById('sessionDate').value = ses.date;
+}
+
+function fmtDateSimple(d){
+  if(!d) return '—';
+  const [y,m,g] = d.split('-');
+  const days = ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'];
+  const dt = new Date(+y, +m-1, +g);
+  return `${days[dt.getDay()]} ${g}/${m}/${y}`;
+}
+
+// ══════════════════════════════════════════
+// RENDER ORDINI GRID
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// BRIOCHE COUNTER
+// ══════════════════════════════════════════
+function updateBriocheCounter(){
+  const briocheP = PRODUCTS.find(p=>p.id==='brioche');
+  if(!briocheP) return;
+
+  // Usa la data della sessione corrente (quella visualizzata), non la data reale di oggi
+  const ses = getSession();
+  const targetDate = ses ? ses.date : '';
+
+  // Somma tutte le brioche di TUTTE le sessioni con la stessa data spedizione
+  let ordinateOggi = 0;
+  Object.values(orders).forEach(s=>{
+    if((s.date||'') !== targetDate) return;
+    (s.rows||[]).forEach(row=>{
+      briocheP.imballi.forEach(imb=>{
+        const v = parseInt((row.qtys||{})[briocheP.id]?.[imb]||0);
+        ordinateOggi += v * briocheP.pz_per_imballo[imb];
+      });
+    });
+  });
+
+  const totEl = document.getElementById('briocheTotale');
+  const ordEl = document.getElementById('briocheOrdinate');
+  const rimEl = document.getElementById('briocheRimanenti');
+  if(!ordEl || !rimEl) return;
+
+  ordEl.textContent = ordinateOggi;
+
+  const totale = parseInt(totEl?.value||0)||0;
+  if(totale > 0){
+    const rim = totale - ordinateOggi;
+    rimEl.textContent = rim;
+    rimEl.style.color = rim < 0 ? '#c84b2f' : rim === 0 ? '#c49a2a' : '#1a7a4a';
+    rimEl.style.fontWeight = rim < 0 ? '700' : '400';
+  } else {
+    rimEl.textContent = '—';
+    rimEl.style.color = 'var(--ink)';
+  }
+}
+
+// ══════════════════════════════════════════
+// RECENT ORDER CHECK
+// ══════════════════════════════════════════
+function checkRecentOrders(clientCod, clientNome){
+  // Data di riferimento: la data della sessione corrente (non necessariamente oggi)
+  const ses = getSession();
+  const sessionDate = ses.date || todayStr();
+
+  // Calcola i 3 giorni precedenti alla data della sessione corrente
+  const refDate = new Date(sessionDate + 'T00:00:00');
+  const limitDate = new Date(refDate);
+  limitDate.setDate(limitDate.getDate() - 3);
+  const limitStr = limitDate.toISOString().slice(0,10);
+
+  // Cerca in TUTTE le sessioni (esclusa quella corrente) nell'intervallo
+  const found = [];
+  Object.entries(orders).forEach(([sesId, s])=>{
+    if(sesId === currentSession) return; // escludi sessione corrente
+    const d = s.date || '';
+    if(!d || d < limitStr || d >= sessionDate) return; // solo giorni PRECEDENTI
+    (s.rows||[]).forEach(row=>{
+      // Confronta per codice cliente (se disponibile) o per nome
+      const matchByCod = clientCod && row.clientCod && row.clientCod === clientCod;
+      const matchByName = !clientCod && row.clientNome && row.clientNome.toUpperCase() === clientNome.toUpperCase();
+      if(!matchByCod && !matchByName) return;
+
+      let pz = 0;
+      PRODUCTS.forEach(p=>{
+        p.imballi.forEach(imb=>{
+          pz += parseInt((row.qtys||{})[p.id]?.[imb]||0) * p.pz_per_imballo[imb];
+        });
+      });
+      if(pz > 0 || row.lotto || row.note){
+        found.push({ date: d, pz, lotto: row.lotto||'', note: row.note||'', corriere: row.corriere||'' });
+      }
+    });
+  });
+
+  const alertEl = document.getElementById('recentOrderAlert');
+  if(!alertEl) return found.length > 0;
+
+  if(found.length === 0){
+    alertEl.style.display = 'none';
+    return false;
+  }
+
+  found.sort((a,b)=>b.date.localeCompare(a.date));
+  const details = found.map(f=>`
+    <span style="display:inline-block;margin:2px 12px 2px 0;">
+      📅 <strong>${fmtDateSimple(f.date)}</strong> — ${f.pz} pz
+      ${f.lotto ? '· Lotto '+f.lotto : ''}
+      ${f.corriere ? '· '+f.corriere : ''}
+      ${f.note ? '· <em>'+esc(f.note)+'</em>' : ''}
+    </span>
+  `).join('');
+
+  alertEl.innerHTML = `⚠️ <strong>${esc(clientNome)}</strong> ha già ordinato nei 3 giorni precedenti al ${fmtDateSimple(sessionDate)}:<br>
+    <div style="margin-top:6px;">${details}</div>
+    <button onclick="document.getElementById('recentOrderAlert').style.display='none'"
+      style="float:right;margin-top:-28px;border:none;background:transparent;cursor:pointer;font-size:18px;color:var(--accent);">✕</button>`;
+  alertEl.style.display = 'block';
+  return true;
+}
+
+// ══════════════════════════════════════════
+// KEYBOARD NAVIGATION IN GRID
+// ══════════════════════════════════════════
+function moveFocus(currentInput, dCol, dRow){
+  const all = Array.from(document.querySelectorAll('.qty-input'));
+  if(!all.length) return;
+  const ri  = +currentInput.dataset.ri;
+  const pid = currentInput.dataset.pid;
+  const imb = currentInput.dataset.imb;
+  if(dRow !== 0){
+    const target = all.find(el =>
+      +el.dataset.ri === ri + dRow &&
+      el.dataset.pid === pid &&
+      el.dataset.imb === imb
+    );
+    if(target){ target.focus(); target.select(); }
+    return;
+  }
+  const idx = all.indexOf(currentInput);
+  const next = all[idx + dCol];
+  if(next){ next.focus(); next.select(); }
+}
+
+function renderGrid(){
+  ensureSession();
+  const ses = getSession();
+  const rows = ses ? (ses.rows || []) : [];
+
+  console.log('renderGrid called, rows.length:', rows.length, 'session:', currentSession);
+  const nb = document.getElementById('noClientsBanner');
+  if(nb) nb.style.display = clients.length === 0 ? 'block' : 'none';
+
+  const wrap = document.getElementById('gridWrap');
+  if(!wrap) return;
+
+  if(rows.length === 0){
+    wrap.innerHTML = '<div class="empty">Nessun ordine. Clicca "+ Aggiungi cliente" per iniziare.</div>';
+    renderSessionSelector();
+    updateBriocheCounter();
+    return;
+  }
+
+  // Build header
+  let head1 = `<tr>
+    <th class="left" rowspan="2" style="min-width:220px;left:0;z-index:15;">CLIENTE</th>`;
+
+  PRODUCTS.forEach(p=>{
+    head1 += `<th class="prod-header" colspan="${p.imballi.length}" style="background:${p.color};">${esc(p.name)}</th>`;
+  });
+  head1 += `<th rowspan="2" style="min-width:70px;background:#4a3f35;">LOTTO</th>
+    <th rowspan="2" style="min-width:100px;background:#4a3f35;">DATA RIC.</th>
+    <th rowspan="2" style="min-width:100px;background:#4a3f35;">DATA LAV.</th>
+    <th rowspan="2" style="min-width:90px;background:#2d4a6b;">CORRIERE</th>
+    <th rowspan="2" style="min-width:150px;background:#2d4a6b;">NOTE</th>
+    <th rowspan="2" style="min-width:160px;background:#4a2d6b;">PERSONALIZZAZIONE</th>
+    <th rowspan="2" style="min-width:80px;background:#2d4a2d;font-size:10px;">INSERITO DA</th>
+    <th class="tot-header" rowspan="2">TOT PZ</th>
+    <th class="diff-header" rowspan="2">DA PROD./VENDERE</th>
+    <th rowspan="2"></th></tr>`;
+
+  let head2 = '<tr>';
+  PRODUCTS.forEach(p=>{
+    p.imballi.forEach(imb=>{
+      const bg = (p.colorByImb && p.colorByImb[imb]) ? p.colorByImb[imb] : p.color+'cc';
+      head2 += `<th class="imballo-header" style="background:${bg};">${imbLabel(imb)}</th>`;
+    });
+  });
+  head2 += '</tr>';
+
+  // Build rows
+  let totalPz = 0;
+  const colTotals = {}; // prodId → imballo → total
+  PRODUCTS.forEach(p=>{ colTotals[p.id]={}; p.imballi.forEach(i=>colTotals[p.id][i]=0); colTotals[p.id]['_tot']=0; });
+
+  // Aggiorna info filtro
+  const filterInfo = document.getElementById('gridFilterInfo');
+  const filteredCount = gridFilterDate ? rows.filter(r=>(r.dataLav||r.dataRic||'')===gridFilterDate).length : rows.length;
+  if(filterInfo) filterInfo.style.display = gridFilterDate && filteredCount < rows.length ? 'inline' : 'none';
+
+  let bodyRows = rows.map((row,ri)=>{
+    let cells = '';
+    let rowPz = 0;
+    PRODUCTS.forEach(p=>{
+      let prodPz = 0;
+      p.imballi.forEach(imb=>{
+        const v = parseInt((row.qtys||{})[p.id]?.[imb]||0);
+        const pz = v * p.pz_per_imballo[imb];
+        prodPz += pz;
+        colTotals[p.id][imb] += v;
+        const cellBg = (p.colorLightByImb && p.colorLightByImb[imb]) ? p.colorLightByImb[imb] : p.colorLight;
+        cells += `<td style="text-align:center;background:${cellBg};">
+          <input type="number" class="qty-input" min="0"
+            data-ri="${ri}" data-pid="${p.id}" data-imb="${imb}"
+            value="${v||''}">
+        </td>`;
+      });
+      colTotals[p.id]['_tot'] += prodPz;
+      rowPz += prodPz;
+    });
+    totalPz += rowPz;
+
+    const hasPers = row.pers && row.pers.trim();
+    const rowBg = row.rowColor || (hasPers ? '#fffde6' : '');
+    const rowHidden = gridFilterDate && (row.dataLav||row.dataRic||'') !== gridFilterDate;
+    const trStyle = rowBg ? `style="background:${rowBg}"` : '';
+    const clientCellStyle = rowBg ? `style="background:${rowBg};"` : '';
+    return `<tr data-ri="${ri}" class="${rowHidden?'row-hidden':''}" ${trStyle}>
+      <td class="client-cell" ${clientCellStyle}>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button class="color-pick-btn" data-ri="${ri}" title="Colore riga" style="width:14px;height:14px;border-radius:50%;border:2px solid #ccc;background:${rowBg||'#fff'};cursor:pointer;padding:0;flex-shrink:0;"></button>
+          <div style="flex:1;min-width:0;">
+            ${row.clientCod ? `<span style="font-family:var(--mono);font-size:10px;color:var(--muted);display:block;line-height:1.2;">${esc(row.clientCod)}</span>` : ''}
+            ${esc(row.clientNome||'')}
+            ${row.operatore ? `<span style="font-size:9px;background:#4a2d6b;color:#fff;border-radius:3px;padding:1px 4px;margin-left:4px;vertical-align:middle;">${esc(row.operatore)}</span>` : ''}
+          </div>
+        </div>
+      </td>
+      ${cells}
+      <td style="min-width:70px;background:#faf8f4;"><input type="text" class="meta-input lotto-input" data-ri="${ri}" data-field="lotto" value="${esc(row.lotto||'')}" placeholder="—" maxlength="20" style="width:65px;border:1px solid var(--line);border-radius:3px;padding:3px 5px;font-family:var(--mono);font-size:12px;text-align:center;background:transparent;"></td>
+      <td style="min-width:100px;background:#faf8f4;"><input type="date" class="meta-input dataric-input" data-ri="${ri}" data-field="dataRic" value="${esc(row.dataRic||'')}" style="width:98px;border:1px solid var(--line);border-radius:3px;padding:3px 4px;font-size:11px;background:transparent;"></td>
+      <td style="min-width:100px;background:#faf8f4;"><input type="date" class="meta-input datalav-input" data-ri="${ri}" data-field="dataLav" value="${esc(row.dataLav||'')}" style="width:98px;border:1px solid var(--line);border-radius:3px;padding:3px 4px;font-size:11px;background:transparent;"></td>
+      <td style="min-width:90px;background:#edf2f8;text-align:center;">
+        <select class="meta-input corriere-select" data-ri="${ri}" data-field="corriere" style="width:84px;border:1px solid var(--line);border-radius:3px;padding:3px 4px;font-size:12px;font-weight:600;background:transparent;color:var(--ink);">
+          <option value="" ${!row.corriere?'selected':''}>—</option>
+          <option value="BRT" ${row.corriere==='BRT'?'selected':''}>BRT</option>
+          <option value="GLS" ${row.corriere==='GLS'?'selected':''}>GLS</option>
+          <option value="SDA" ${row.corriere==='SDA'?'selected':''}>SDA</option>
+          <option value="TNT" ${row.corriere==='TNT'?'selected':''}>TNT</option>
+          <option value="DHL" ${row.corriere==='DHL'?'selected':''}>DHL</option>
+          <option value="Ritiro" ${row.corriere==='Ritiro'?'selected':''}>Ritiro</option>
+        </select>
+      </td>
+      <td style="min-width:150px;background:#edf2f8;">
+        <input type="text" class="meta-input note-input" data-ri="${ri}" data-field="note" value="${esc(row.note||'')}" placeholder="Note…" maxlength="120" style="width:145px;border:1px solid var(--line);border-radius:3px;padding:3px 6px;font-size:12px;background:transparent;">
+      </td>
+      <td style="min-width:160px;background:#f0ebf8;position:relative;">
+        <div style="display:flex;align-items:center;gap:2px;">
+          <input type="text" class="meta-input pers-input" data-ri="${ri}" data-field="pers" value="${esc(row.pers||'')}" placeholder="Cerca…" maxlength="60" autocomplete="off"
+            style="flex:1;min-width:0;border:1px solid var(--line);border-radius:3px;padding:3px 6px;font-size:12px;background:transparent;">
+          ${row.pers ? `<button class="pers-clear-btn" data-ri="${ri}" title="Rimuovi personalizzazione" style="border:none;background:none;cursor:pointer;color:#c0392b;font-size:14px;padding:0 3px;line-height:1;">×</button>` : ''}
+        </div>
+      </td>
+      <td style="min-width:80px;background:#e8f0e8;text-align:center;font-family:var(--mono);font-size:11px;color:#2d4a2d;font-weight:600;">${esc(row.operatore||'')}</td>
+      <td class="tot-cell" id="rtot-${ri}">${rowPz||''}</td>
+      <td class="${rowPz>0?'diff-pos':'diff-zero'}" id="diff-${ri}">${rowPz||''}</td>
+      <td><button class="btn sm" onclick="removeRow(${ri})" title="Elimina riga">🗑</button></td>
+    </tr>`;  }).join('');
+
+  // Footer totals
+  let footCells = '';
+  PRODUCTS.forEach(p=>{
+    p.imballi.forEach(imb=>{
+      footCells += `<td id="ftot-${p.id}-${imb}" style="background:${(p.colorLightByImb&&p.colorLightByImb[imb])||p.colorLight};font-family:var(--mono);text-align:center;">${colTotals[p.id][imb]||''}</td>`;
+    });
+  });
+
+  const target = parseInt(document.getElementById('targetTotal')?.value||0)||0;
+  const diff = target ? (target - totalPz) : 0;
+  const diffClass = target ? (diff>0?'diff-pos':diff<0?'diff-neg':'diff-zero') : '';
+  const diffTxt = target ? (diff>0?`+${diff}`:diff) : totalPz||'';
+
+  const table = `<table class="grid">
+    <thead>${head1}${head2}</thead>
+    <tbody>${bodyRows}</tbody>
+    <tfoot>
+      <tr class="grid-footer">
+        <td class="client-cell">TOTALE ORDINI</td>
+        ${footCells}
+        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+        <td id="grand-total">${totalPz||''}</td>
+        <td class="${diffClass}" id="grand-diff">${diffTxt}</td>
+        <td></td>
+      </tr>
+    </tfoot>
+  </table>`;
+
+  wrap.innerHTML = table;
+  renderSessionSelector();
+  updateBriocheCounter();
+
+  // Attach input listeners
+  // refresh totals row only on blur so the cursor is never lost
+  document.querySelectorAll('.qty-input').forEach(inp=>{
+    inp.addEventListener('input', e=>{
+      const ri = +e.target.dataset.ri;
+      const pid = e.target.dataset.pid;
+      const imb = e.target.dataset.imb;
+      const val = parseInt(e.target.value)||0;
+      const ses = getSession();
+      if(!ses.rows[ri].qtys) ses.rows[ri].qtys = {};
+      if(!ses.rows[ri].qtys[pid]) ses.rows[ri].qtys[pid] = {};
+      ses.rows[ri].qtys[pid][imb] = val;
+      // update row total in place (no full re-render)
+      updateRowTotals(ri);
+    });
+    inp.addEventListener('blur', e=>{
+      updateAllTotals();
+      updateBriocheCounter();
+      renderProduzione();
+      notifyChange();
+    });
+
+    // Navigazione tastiera: Tab/Invio → destra, Shift+Tab → sinistra, ↑↓ → su/giù
+    inp.addEventListener('keydown', e=>{
+      if(e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)){
+        e.preventDefault();
+        moveFocus(e.target, 1, 0);
+      } else if(e.key === 'Tab' && e.shiftKey){
+        e.preventDefault();
+        moveFocus(e.target, -1, 0);
+      } else if(e.key === 'ArrowDown'){
+        e.preventDefault();
+        moveFocus(e.target, 0, 1);
+      } else if(e.key === 'ArrowUp'){
+        e.preventDefault();
+        moveFocus(e.target, 0, -1);
+      } else if(e.key === 'ArrowRight'){
+        // solo se cursore è alla fine del valore
+        if(e.target.selectionStart === String(e.target.value).length){
+          e.preventDefault();
+          moveFocus(e.target, 1, 0);
+        }
+      } else if(e.key === 'ArrowLeft'){
+        if(e.target.selectionStart === 0){
+          e.preventDefault();
+          moveFocus(e.target, -1, 0);
+        }
+      }
+    });
+  });
+
+  // Color picker per riga cliente
+  document.querySelectorAll('.color-pick-btn').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      e.stopPropagation();
+      // Rimuovi popup esistenti
+      document.querySelectorAll('.color-popup').forEach(p=>p.remove());
+      const ri = +btn.dataset.ri;
+      const popup = document.createElement('div');
+      popup.className='color-popup';
+      popup.style.cssText='position:absolute;z-index:500;background:#fff;border:1px solid #ccc;border-radius:8px;padding:8px;box-shadow:0 4px 16px rgba(0,0,0,.2);display:flex;gap:6px;flex-wrap:wrap;max-width:180px;';
+      ROW_COLORS.forEach(c=>{
+        const dot = document.createElement('button');
+        dot.title = c.label;
+        dot.style.cssText=`width:22px;height:22px;border-radius:50%;border:2px solid ${c.value?'#ccc':'#aaa'};background:${c.preview};cursor:pointer;padding:0;`;
+        dot.addEventListener('click', ()=>{
+          const ses = getSession();
+          if(ses.rows[ri]) ses.rows[ri].rowColor = c.value;
+          popup.remove();
+          renderGrid();
+          notifyChange();
+        });
+        popup.appendChild(dot);
+      });
+      btn.parentElement.style.position='relative';
+      btn.parentElement.appendChild(popup);
+      setTimeout(()=>document.addEventListener('click', ()=>popup.remove(), {once:true}), 10);
+    });
+  });
+
+  // Listeners for lotto and date fields
+  document.querySelectorAll('.meta-input').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      const ri = +e.target.dataset.ri;
+      const field = e.target.dataset.field;
+      const ses = getSession();
+      if(ses.rows[ri]) ses.rows[ri][field] = e.target.value;
+      if(document.getElementById("tab-produzione").classList.contains("active")) renderProduzione();
+      notifyChange();
+    });
+  });
+
+  // Pulsante X per cancellare personalizzazione
+  document.querySelectorAll('.pers-clear-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const ri = +btn.dataset.ri;
+      const ses = getSession();
+      if(ses.rows[ri]){
+        ses.rows[ri].pers = '';
+        renderGrid();
+        notifyChange();
+      }
+    });
+  });
+
+  // Autocomplete PERSONALIZZAZIONE
+  document.querySelectorAll('.pers-input').forEach(inp=>{
+    let dropdown = null;
+    inp.addEventListener('input', function(){
+      const q = this.value.trim().toLowerCase();
+      if(dropdown){ dropdown.remove(); dropdown=null; }
+      if(!q) return;
+      const matches = PERSONALIZZAZIONI.filter(p=>p.toLowerCase().includes(q)).slice(0,15);
+      if(!matches.length) return;
+      dropdown = document.createElement('div');
+      dropdown.style.cssText='position:absolute;z-index:500;background:#fff;border:1px solid #ccc;border-radius:4px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.15);min-width:180px;left:0;top:100%;';
+      matches.forEach(m=>{
+        const item = document.createElement('div');
+        item.textContent = m;
+        item.style.cssText='padding:6px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid #eee;';
+        item.addEventListener('mousedown', e=>{
+          e.preventDefault();
+          inp.value = m;
+          const ri = +inp.dataset.ri; const ses = getSession();
+          if(ses && ses.rows[ri]) ses.rows[ri].pers = m;
+          notifyChange();
+          if(dropdown){ dropdown.remove(); dropdown=null; }
+        });
+        item.addEventListener('mouseover', ()=>item.style.background='#f0ebf8');
+        item.addEventListener('mouseout',  ()=>item.style.background='');
+        dropdown.appendChild(item);
+      });
+      inp.parentElement.style.position='relative';
+      inp.parentElement.appendChild(dropdown);
+    });
+    inp.addEventListener('blur', ()=>{
+      setTimeout(()=>{ if(dropdown){ dropdown.remove(); dropdown=null; } }, 200);
+      const ri = +inp.dataset.ri; const ses = getSession();
+      if(ses && ses.rows[ri]) ses.rows[ri].pers = inp.value;
+      notifyChange();
+    });
+    inp.addEventListener('keydown', function(e){
+      if(!dropdown) return;
+      const items = [...dropdown.querySelectorAll('div')];
+      let sel = items.findIndex(i=>i.style.background==='rgb(240, 235, 248)');
+      if(e.key==='ArrowDown'){ e.preventDefault(); if(sel>=0) items[sel].style.background=''; items[Math.min(sel+1,items.length-1)].style.background='#f0ebf8'; }
+      else if(e.key==='ArrowUp'){ e.preventDefault(); if(sel>0){ items[sel].style.background=''; items[sel-1].style.background='#f0ebf8'; } }
+      else if(e.key==='Enter'&&sel>=0){ e.preventDefault(); items[sel].dispatchEvent(new MouseEvent('mousedown')); }
+      else if(e.key==='Escape'){ dropdown.remove(); dropdown=null; }
+    });
+  });
+}
+
+// ══════════════════════════════════════════
+// IN-PLACE TOTAL UPDATES (no DOM rebuild)
+// ══════════════════════════════════════════
+function calcRowPzFromInputs(ri){
+  let pz = 0;
+  document.querySelectorAll(`.qty-input[data-ri="${ri}"]`).forEach(inp=>{
+    const pid = inp.dataset.pid;
+    const imb = inp.dataset.imb;
+    const v = parseInt(inp.value)||0;
+    const prod = PRODUCTS.find(p=>p.id===pid);
+    if(prod) pz += v * (prod.pz_per_imballo[imb]||0);
+  });
+  return pz;
+}
+
+function updateRowTotals(ri){
+  // update product subtotals for this row
+  PRODUCTS.forEach(p=>{
+    let prodPz = 0;
+    document.querySelectorAll(`.qty-input[data-ri="${ri}"][data-pid="${p.id}"]`).forEach(inp=>{
+      const imb = inp.dataset.imb;
+      const v = parseInt(inp.value)||0;
+      prodPz += v * (p.pz_per_imballo[imb]||0);
+    });
+  });
+  // update row total
+  const rowPz = calcRowPzFromInputs(ri);
+  const rtEl = document.getElementById(`rtot-${ri}`);
+  if(rtEl) rtEl.textContent = rowPz || '';
+  const rdEl = document.getElementById(`diff-${ri}`);
+  if(rdEl){ rdEl.textContent = rowPz || ''; rdEl.className = rowPz>0?'diff-pos':'diff-zero'; }
+}
+
+function updateAllTotals(){
+  const ses = getSession();
+  if(!ses) return;
+  const rows = ses.rows || [];
+
+  // recalc column totals from state
+  const colTotals = {};
+  PRODUCTS.forEach(p=>{ colTotals[p.id]={}; p.imballi.forEach(i=>colTotals[p.id][i]=0); colTotals[p.id]['_tot']=0; });
+
+  let totalPz = 0;
+  rows.forEach((row,ri)=>{
+    PRODUCTS.forEach(p=>{
+      p.imballi.forEach(imb=>{
+        const v = parseInt((row.qtys||{})[p.id]?.[imb]||0);
+        colTotals[p.id][imb] += v;
+        colTotals[p.id]['_tot'] += v * p.pz_per_imballo[imb];
+      });
+    });
+    totalPz += calcRowPzFromInputs(ri);
+  });
+
+  // update footer cells
+  PRODUCTS.forEach(p=>{
+    p.imballi.forEach(imb=>{
+      const el = document.getElementById(`ftot-${p.id}-${imb}`);
+      if(el) el.textContent = colTotals[p.id][imb] || '';
+    });
+  });
+  const gtEl = document.getElementById('grand-total');
+  if(gtEl) gtEl.textContent = totalPz || '';
+
+  const target = parseInt(document.getElementById('targetTotal')?.value||0)||0;
+  const diff = target ? target - totalPz : totalPz;
+  const diffEl = document.getElementById('grand-diff');
+  if(diffEl){
+    diffEl.textContent = target ? (diff>0?'+'+diff:diff) : (totalPz||'');
+    diffEl.className = target ? (diff>0?'diff-pos':diff<0?'diff-neg':'diff-zero') : '';
+  }
+}
+let selectedClient = null;
+
+function removeRow(ri){
+  if(!confirm('Eliminare questa riga?')) return;
+  const ses = getSession();
+  ses.rows.splice(ri,1);
+  renderGrid();
+  renderProduzione();
+  notifyChange();
+}
+
+// Autocomplete
+let acItems = [];
+let acSel = -1;
+
+document.getElementById('acInput').addEventListener('input', function(){
+  const q = this.value.trim().toLowerCase();
+  const list = document.getElementById('acList');
+  selectedClient = null; // reset when user types
+  if(q.length < 2){ list.style.display='none'; return; }
+  acItems = clients.filter(c=>
+    c.nome.toLowerCase().includes(q) || c.cod.toLowerCase().includes(q)
+  ).slice(0,50);
+  if(acItems.length===0){ list.style.display='none'; return; }
+  list.innerHTML = acItems.map((c,i)=>
+    `<div class="ac-item" data-i="${i}">${esc(c.nome)}<span class="ac-cod">${esc(c.cod)}</span></div>`
+  ).join('');
+  list.style.display='block';
+  acSel = -1;
+});
+
+// Use mousedown (fires before blur) + preventDefault so input keeps focus
+document.getElementById('acList').addEventListener('mousedown', function(e){
+  e.preventDefault(); // prevent input blur
+  const item = e.target.closest('.ac-item');
+  if(!item) return;
+  const c = acItems[+item.dataset.i];
+  selectedClient = c;
+  document.getElementById('acInput').value = c.nome + (c.cod ? ' ['+c.cod+']' : '');
+  document.getElementById('acList').style.display='none';
+  // Aggiunge direttamente senza bisogno di cliccare "Aggiungi"
+  setTimeout(()=>{ document.getElementById('btnConfirmAdd').click(); }, 50);
+});
+
+document.getElementById('acInput').addEventListener('keydown', function(e){
+  const list = document.getElementById('acList');
+  const items = list.querySelectorAll('.ac-item');
+  if(e.key==='ArrowDown'){ e.preventDefault(); acSel=Math.min(acSel+1,items.length-1); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); acSel=Math.max(acSel-1,0); }
+  else if(e.key==='Enter'){
+    e.preventDefault();
+    // Seleziona il cliente evidenziato o il primo risultato
+    if(acSel>=0 && acItems[acSel]){
+      selectedClient = acItems[acSel];
+    } else if(acItems.length>0){
+      selectedClient = acItems[0];
+    }
+    if(selectedClient){
+      this.value = selectedClient.nome;
+      list.style.display='none';
+      // Conferma automaticamente — aggiunge il cliente e passa alla griglia
+      document.getElementById('btnConfirmAdd').click();
+    }
+    return;
+  } else if(e.key==='Escape'){
+    document.getElementById('btnCancelAdd').click();
+    return;
+  } else { return; }
+  items.forEach((el,i)=>el.classList.toggle('sel',i===acSel));
+});
+
+document.getElementById('acInput').addEventListener('blur', ()=>{
+  // small delay so mousedown on list fires first
+  setTimeout(()=>{ document.getElementById('acList').style.display='none'; }, 150);
+});
+
+document.getElementById('btnCancelAdd').addEventListener('click', ()=>{
+  document.getElementById('addRowForm').style.display='none';
+  document.getElementById('acInput').value='';
+  selectedClient=null;
+  document.getElementById('recentOrderAlert').style.display='none';
+});
+
+document.getElementById('briocheTotale').addEventListener('input', ()=>{
+  updateBriocheCounter();
+});
+
+document.getElementById('btnConfirmAdd').addEventListener('click', ()=>{
+  ensureSession();
+  const ses = getSession();
+  let client = selectedClient;
+
+  if(!client){
+    // try to match typed text against first autocomplete result
+    if(acItems.length > 0){
+      client = acItems[0];
+    } else {
+      const txt = document.getElementById('acInput').value.trim();
+      if(!txt){ alert('Cerca e seleziona un cliente dalla lista.'); return; }
+      client = { cod:'', nome:txt.toUpperCase() };
+    }
+  }
+
+  // check duplicate in current session
+  if(client.cod && ses.rows.find(r=>r.clientCod===client.cod)){
+    if(!confirm(`${client.nome} è già nella lista. Aggiungere comunque?`)) return;
+  }
+
+  // Leggi i valori predefiniti della sessione
+  const defLotto   = document.getElementById('defaultLotto')?.value.trim() || '';
+  const defDataRic = document.getElementById('defaultDataRic')?.value || '';
+  const defDataLav = document.getElementById('defaultDataLav')?.value || '';
+
+  ses.rows.push({ id:uid(), clientCod:client.cod||'', clientNome:client.nome, qtys:{},
+    lotto: defLotto, dataRic: defDataRic, dataLav: defDataLav, corriere:'', note:'', pers:'',
+    operatore: currentOperator, rowColor:'', descExtra:'', shelfExtra:'' });
+  document.getElementById('acInput').value='';
+  selectedClient = null;
+  acItems = [];
+  acSel = -1;
+  document.getElementById('acList').style.display='none';
+  // Lascia il form aperto per aggiungere subito un altro cliente
+  // Rimetti il focus sul campo di ricerca
+  document.getElementById('acInput').focus();
+
+  renderGrid();
+  renderProduzione();
+  notifyChange();
+
+  // Check for recent orders
+  checkRecentOrders(client.cod, client.nome);
+});
+
+// ══════════════════════════════════════════
+// NEW SESSION
+// ══════════════════════════════════════════
+document.getElementById('btnNewSession').addEventListener('click', ()=>{
+  const date = document.getElementById('sessionDate').value || todayStr();
+  if(!confirm(`Avviare una nuova sessione per il ${fmtDateSimple(date)}?\nLa sessione corrente viene conservata e sarà accessibile dal menu a tendina.`)) return;
+  currentSession = 'ses_'+date.replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,6);
+  orders[currentSession] = { date, rows:[] };
+  renderGrid();
+  renderProduzione();
+  notifyChange();
+});
+
+document.getElementById('sessionSelector').addEventListener('change', function(){
+  const id = this.value;
+  if(!id) return;
+  currentSession = id;
+  renderGrid();
+  renderProduzione();
+});
+
+document.getElementById('btnDeleteSession').addEventListener('click', ()=>{
+  if(!currentSession || !orders[currentSession]) return;
+  const ses = orders[currentSession];
+  const label = fmtDateSimple(ses.date);
+  if(!confirm(`Eliminare definitivamente la sessione "${label}" con ${(ses.rows||[]).length} clienti?\nQuesta azione non può essere annullata.`)) return;
+  delete orders[currentSession];
+  currentSession = null;
+  ensureSession();
+  renderGrid();
+  renderProduzione();
+  notifyChange();
+});
+
+
+// ══════════════════════════════════════════
+// PRODUZIONE
+// ══════════════════════════════════════════
+function renderProduzione(){
+  const el = document.getElementById('prodContent');
+  if(!el) return;
+
+  // ── Raccoglie tutti gli ordini da tutte le sessioni, raggruppati per data ──
+  const byDate = {};
+  Object.values(orders).forEach(ses=>{
+    (ses.rows||[]).forEach(row=>{ 
+      // Usa dataLav se presente, altrimenti dataRic, altrimenti data sessione
+      const date = row.dataLav || row.dataRic || ses.date || '__senza_data__';
+      if(!byDate[date]) byDate[date]=[];
+      byDate[date].push(row);
+    });
+  });
+
+  const sortedDates = Object.keys(byDate).sort((a,b)=>{
+    if(a==='__senza_data__') return 1;
+    if(b==='__senza_data__') return -1;
+    return a.localeCompare(b);
+  });
+
+  if(sortedDates.length===0 || sortedDates.every(d=>byDate[d].length===0)){
+    el.innerHTML = '<div class="empty">Nessun ordine inserito.</div>';
+    return;
+  }
+
+  const fmtN = n => n%1===0?n:n.toFixed(1);
+
+  function fmtDate(d){
+    if(!d) return '—';
+    const [y,m,g]=d.split('-');
+    return g+'/'+m+'/'+y;
+  }
+
+  function calcPz(id, rowSet){
+    const p = PRODUCTS.find(x=>x.id===id);
+    if(!p) return 0;
+    return rowSet.reduce((acc,row)=>
+      acc + p.imballi.reduce((s,imb)=>
+        s + parseInt((row.qtys||{})[p.id]?.[imb]||0) * p.pz_per_imballo[imb], 0), 0);
+  }
+
+  // Filtro data opzionale
+  const filterEl = document.getElementById('prodFilterDate');
+  const filterDate = filterEl ? filterEl.value : '';
+  const filterCorriere = document.getElementById('prodFilterCorriere')?.value || '';
+  const datesToShow = filterDate
+    ? sortedDates.filter(d=>d===filterDate)
+    : sortedDates;
+
+  let html = '';
+
+  datesToShow.forEach(dateKey=>{
+    let rows = byDate[dateKey]||[];
+    if(!rows.length) return;
+
+    // Filtra per corriere se selezionato
+    if(filterCorriere){
+      rows = rows.filter(r=> filterCorriere==='__vuoto__' ? !r.corriere : r.corriere===filterCorriere);
+      if(!rows.length) return;
+    }
+
+    const label = dateKey==='__senza_data__' ? 'Data non specificata' : fmtDate(dateKey);
+    const dow = dateKey!=='__senza_data__'
+      ? ' — '+['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][new Date(dateKey+'T00:00:00').getDay()]
+      : '';
+
+    // totali per cards
+    const pzB  = calcPz('brioche',   rows);
+    // Calcoli separati per GR.8 e CAMP.
+    const carGross8 = rows.reduce((acc,row)=>acc + parseInt((row.qtys||{})['brioche']?.['gross8']||0), 0); // cartoni GR.8
+    const pzCamp    = rows.reduce((acc,row)=>acc + parseInt((row.qtys||{})['brioche']?.['camp']||0), 0);   // campionature dirette
+    const campTotale = (carGross8 * 8) + pzCamp;  // campionatura totale = GR8×8 + camp dirette
+    const pzPa = calcPz('paffutella',rows);
+    const pzMg = calcPz('mini',      rows);
+    const pzM2 = pzMg/2;
+    const pzCh = calcPz('choco',     rows);
+    const pzRo = calcPz('romana',    rows);
+    const pzRoCh = calcPz('romanachoco', rows);
+     const pzRoMini = calcPz('romanamini', rows);
+    const pzGrosse = calcPz('grosse48',  rows);
+    const pzMiniPaf = calcPz('minipaf',  rows);
+    const pzBabyB = calcPz('babybrioche',rows);
+    const pzBabyP = calcPz('babypaf',   rows);
+    // SABLU pz singoli
+    const pzSabluB  = calcPz('sablu_brioche', rows);
+    const pzSabluM  = calcPz('sablu_mini',    rows);
+    const pzSabluPa = calcPz('sablu_paf',     rows);
+    const pzSabluPz = calcPz('sablu_panzotta',rows);
+    const pzSabluCh = calcPz('sablu_choco',   rows);
+    const pzPz = calcPz('panzotta',  rows);
+    const pzMa = calcPz('mandorla',  rows);
+    const pzLa = calcPz('lattante',  rows);
+
+    // Pallet per corriere (escluse paste mandorla e lattante, diviso 52, arrotondato per eccesso)
+    const EXCLUDED_FROM_PALLET = ['lat_mandorla','lat_pistacchio','lat_caffe','lat_nocciola','pura_pistacchio','pura_mandorla','pura_nocciola','sablu_brioche','sablu_mini','sablu_paf','sablu_panzotta','sablu_choco'];
+    function calcPzForCorriere(corriere, rowSet){
+      return rowSet
+        .filter(r=> corriere ? r.corriere===corriere : true)
+        .reduce((tot, row)=>{
+          return tot + PRODUCTS
+            .filter(p=> !EXCLUDED_FROM_PALLET.includes(p.id))
+            .reduce((s,p)=> s + p.imballi.reduce((ss,imb)=>
+              ss + parseInt((row.qtys||{})[p.id]?.[imb]||0) * p.pz_per_imballo[imb], 0), 0);
+        }, 0);
+    }
+    const pzBRT = calcPzForCorriere('BRT', rows);
+    const pzGLS = calcPzForCorriere('GLS', rows);
+    const palletBRT = pzBRT > 0 ? Math.ceil(pzBRT / 52 / 24) : 0;
+    const palletGLS = pzGLS > 0 ? Math.ceil(pzGLS / 52 / 24) : 0;
+    // IMPASTATRICE = Brioche + Paffutella + Mini÷2 + Grosse + MiniPaf + BabyBrioche + BabyPaf
+    const totImp = pzB + pzPa + pzM2 + pzGrosse + pzMiniPaf + pzBabyB + pzBabyP + pzSabluB + Math.floor(pzSabluM/2) + pzSabluPa;
+    const kgBrioche = Math.ceil(totImp / 25 / 5) * 5;
+     const totRomana = pzRo + Math.floor(pzRoMini / 2);
+     const kgRomana = Math.ceil(totRomana / 25 / 5) * 5;
+
+    // cards riepilogo — RIGA 1: Pallet e Kg (dati operativi principali)
+    let cards = `<div class="prod-summary-row no-print" style="margin-bottom:8px;">`;
+    cards += `<div class="prod-mini-card" style="border:2px solid var(--accent);">
+      <div class="prod-mini-label" style="background:var(--accent);">IMPASTATRICE</div>
+      <div class="prod-mini-val" style="color:var(--accent);">${fmtN(totImp)}</div>
+      <div class="prod-mini-sub">B:${pzB} Pa:${pzPa} M÷2:${fmtN(pzM2)} Gr:${pzGrosse} MP:${pzMiniPaf} BB:${pzBabyB} BP:${pzBabyP}${pzSabluB||pzSabluM||pzSabluPa?' SBL:'+( pzSabluB+Math.floor(pzSabluM/2)+pzSabluPa):''}</div>
+    </div>`;
+    if(pzSabluB || pzSabluM || pzSabluPa){
+      const sabluTotPz = pzSabluB + Math.floor(pzSabluM/2) + pzSabluPa;
+      cards += `<div class="prod-mini-card" style="border:2px solid #b8860b;">
+        <div class="prod-mini-label" style="background:#b8860b;">SABLU PZ TOT</div>
+        <div class="prod-mini-val" style="color:#b8860b;">${sabluTotPz}</div>
+        <div class="prod-mini-sub">B:${pzSabluB} M÷2:${Math.floor(pzSabluM/2)} Pa:${pzSabluPa}</div>
+      </div>`;
+    }
+    cards += `<div class="prod-mini-card" style="border:2px solid #5a7a9a;">
+      <div class="prod-mini-label" style="background:#5a7a9a;">KG BRIOSCE</div>
+      <div class="prod-mini-val" style="color:#5a7a9a;">${kgBrioche}</div>
+      <div class="prod-mini-sub">÷ 25</div>
+    </div>`;
+    cards += `<div class="prod-mini-card" style="border:2px solid #7a5a9a;">
+      <div class="prod-mini-label" style="background:#7a5a9a;">KG ROMANA</div>
+      <div class="prod-mini-val" style="color:#7a5a9a;">${kgRomana}</div>
+      <div class="prod-mini-sub">Ro:${pzRo} +Mini÷2:${Math.floor(pzRoMini/2)}</div>
+    </div>`;
+
+    if(palletBRT > 0) cards += `<div class="prod-mini-card" style="border:2px solid #c84b2f;">
+      <div class="prod-mini-label" style="background:#c84b2f;">PALLET BRT</div>
+      <div class="prod-mini-val" style="color:#c84b2f;">${palletBRT}</div>
+      <div class="prod-mini-sub">${pzBRT} pz ÷52 ÷24</div>
+    </div>`;
+    if(palletGLS > 0) cards += `<div class="prod-mini-card" style="border:2px solid #2d5fa8;">
+      <div class="prod-mini-label" style="background:#2d5fa8;">PALLET GLS</div>
+      <div class="prod-mini-val" style="color:#2d5fa8;">${palletGLS}</div>
+      <div class="prod-mini-sub">${pzGLS} pz ÷52 ÷24</div>
+    </div>`;
+    cards += `</div>`;
+
+    // RIGA 2: dettaglio per prodotto
+    cards += `<div class="prod-summary-row no-print">`;
+    [{id:'brioche',l:'BRIOSCIA',c:'#d4a800'},{id:'paffutella',l:'PAFFUTELLA',c:'#1a7a4a'},
+     {id:'mini',l:'MINI ÷2',c:'#c0392b',div2:true},{id:'choco',l:'CHOCO',c:'#6b3a1f'},
+     {id:'romana',l:'ROMANA',c:'#b5451b'},{id:'romanachoco',l:'ROMANA CH.',c:'#7a2e10'},
+     {id:'romanamini',l:'ROMANA MINI',c:'#c0602a'},
+     {id:'grosse48',l:'GROSSE 105g',c:'#b87c1a'},{id:'minipaf',l:'MINI PAF.',c:'#27a060'},
+     {id:'babybrioche',l:'BABY BRIOC.',c:'#e06030'},{id:'babypaf',l:'BABY PAF.',c:'#208050'},
+     {id:'sablu_brioche',l:'SABLU B.',c:'#d4a800'},{id:'sablu_mini',l:'SABLU M.',c:'#c0392b'},
+     {id:'sablu_paf',l:'SABLU Pa.',c:'#1a7a4a'},{id:'sablu_panzotta',l:'SABLU Pz.',c:'#7e3bb5'},
+     {id:'sablu_choco',l:'SABLU Ch.',c:'#6b3a1f'},
+     {id:'panzotta',l:'PANZOTTA',c:'#7e3bb5'},
+     {id:'lat_mandorla',l:'LAT.MAND.',c:'#1565a8'},{id:'lat_pistacchio',l:'LAT.PIST.',c:'#1a6b2a'},
+     {id:'lat_caffe',l:'LAT.CAFFÈ',c:'#5a3010'},{id:'lat_nocciola',l:'LAT.NOCC.',c:'#8b5e2a'},
+     {id:'pura_pistacchio',l:'PURA PIST.',c:'#2d6e3a'},{id:'pura_mandorla',l:'PURA MAND.',c:'#c47c00'},
+     {id:'pura_nocciola',l:'PURA NOCC.',c:'#a0620a'},{id:'paste_mand6',l:'PASTE M.6',c:'#d4821a'},{id:'frutta_mart',l:'FRUTTA M.',c:'#c03a6a'}].forEach(cfg=>{
+      const v = calcPz(cfg.id,rows);
+      cards += `<div class="prod-mini-card">
+        <div class="prod-mini-label" style="background:${cfg.c};">${cfg.l}</div>
+        <div class="prod-mini-val">${cfg.div2?fmtN(v/2):v}</div>
+      </div>`;
+    });
+    cards += `</div>`;
+
+    // stampa riepilogo
+    const printSummary = `<div class="print-summary print-only">
+      <table class="print-table"><tr>
+        <th style="background:var(--accent);color:#fff;">IMPASTATRICE</th>
+        <td style="font-size:16px;font-weight:700;color:var(--accent);">${fmtN(totImp)}</td>
+        <th style="background:#5a7a9a;color:#fff;">KG BRIOSCE</th>
+        <td style="font-size:16px;font-weight:700;color:#5a7a9a;">${kgBrioche} kg</td>
+        <th style="background:#b5451b;color:#fff;">ROMANA</th>
+        <td style="font-size:16px;font-weight:700;color:#b5451b;">${pzRo}</td>
+        <th style="background:#7a5a9a;color:#fff;">KG ROMANA</th>
+        <td style="font-size:16px;font-weight:700;color:#7a5a9a;">${kgRomana} kg</td>
+        <th style="background:#7a2e10;color:#fff;">ROMANA CH.</th>
+        <td style="font-size:16px;font-weight:700;color:#7a2e10;">${pzRoCh}</td>
+        ${palletBRT>0?`<th style="background:#c84b2f;color:#fff;">PALLET BRT</th><td style="font-size:16px;font-weight:700;color:#c84b2f;">${palletBRT}</td>`:''}
+        ${palletGLS>0?`<th style="background:#2d5fa8;color:#fff;">PALLET GLS</th><td style="font-size:16px;font-weight:700;color:#2d5fa8;">${palletGLS}</td>`:''}
+        <th style="background:#d4a800;color:#fff;">BRIOSCIA</th><td>${pzB}</td>
+        <th style="background:#1a7a4a;color:#fff;">PAFFUTELLA</th><td>${pzPa}</td>
+        <th style="background:#c0392b;color:#fff;">MINI ÷2</th><td>${fmtN(pzM2)}</td>
+        <th style="background:#6b3a1f;color:#fff;">CHOCO</th><td>${pzCh + pzSabluCh}</td>
+        <th style="background:#b87c1a;color:#fff;">GROSSE</th><td>${pzGrosse}</td>
+        <th style="background:#27a060;color:#fff;">MINI PAF</th><td>${pzMiniPaf}</td>
+        <th style="background:#e06030;color:#fff;">BABY BR.</th><td>${pzBabyB}</td>
+        <th style="background:#208050;color:#fff;">BABY PAF</th><td>${pzBabyP}</td>
+        <th style="background:#7e3bb5;color:#fff;">PANZOTTA</th><td>${pzPz + pzSabluPz}</td>
+      </tr></table>
+    </div>`;
+
+    // tabella clienti — solo prodotti con almeno un ordine
+    const activeProd = PRODUCTS.filter(p=>
+      rows.some(row=>p.imballi.some(imb=>parseInt((row.qtys||{})[p.id]?.[imb]||0)>0))
+    );
+
+    let thead = `<thead><tr><th style="min-width:180px;text-align:left;">CLIENTE</th>`;
+    activeProd.forEach(p=>{
+      thead += `<th colspan="${p.imballi.length}" style="background:${p.color};color:#fff;">${p.name}</th>`;
+    });
+    thead += `<th style="background:#333;color:#fff;">TOT PZ</th>
+      <th style="background:#2d4a6b;color:#fff;">CORRIERE</th>
+      <th style="background:#2d4a6b;color:#fff;min-width:120px;">NOTE</th>
+      <th style="background:#4a2d6b;color:#fff;min-width:140px;">PERSONALIZZAZIONE</th></tr><tr><th></th>`;
+    activeProd.forEach(p=>{
+      p.imballi.forEach(imb=>{
+        const bg=(p.colorByImb&&p.colorByImb[imb])?p.colorByImb[imb]+'bb':p.color+'bb';
+        thead += `<th style="background:${bg};color:#fff;font-size:10px;">${imbLabel(imb)}</th>`;
+      });
+    });
+    thead += `<th></th><th></th><th></th></tr></thead>`;
+
+    let tbody = '<tbody>';
+    let grandTotal = 0;
+    rows.forEach(row=>{
+      let rowPz=0; let cells='';
+      activeProd.forEach(p=>{
+        p.imballi.forEach(imb=>{
+          const v=parseInt((row.qtys||{})[p.id]?.[imb]||0);
+          const bg=(p.colorLightByImb&&p.colorLightByImb[imb])||p.colorLight;
+          rowPz+=v*p.pz_per_imballo[imb];
+          cells+=`<td style="text-align:center;background:${bg};border:1px solid #ddd;">${v||''}</td>`;
+        });
+      });
+      grandTotal+=rowPz;
+      const corrBg=row.corriere==='BRT'?'#c84b2f':row.corriere==='GLS'?'#2d5fa8':'transparent';
+      const corrCol=row.corriere?'#fff':'inherit';
+      tbody+=`<tr>
+        <td style="border:1px solid #ddd;padding:3px 6px;">
+          ${row.clientCod?`<span style="font-size:9px;color:#999;display:block;">${esc(row.clientCod)}</span>`:''}
+          <strong>${esc(row.clientNome||'')}</strong>
+          ${row.lotto?`<span style="font-size:9px;color:#888;"> · L.${esc(row.lotto)}</span>`:''}
+        </td>
+        ${cells}
+        <td style="text-align:center;font-weight:700;border:1px solid #ddd;">${rowPz||''}</td>
+        <td style="text-align:center;border:1px solid #ddd;">
+          <span style="background:${corrBg};color:${corrCol};padding:2px 6px;border-radius:8px;font-size:10px;font-weight:700;">${row.corriere||''}</span>
+        </td>
+        <td style="border:1px solid #ddd;padding:3px 6px;font-size:11px;color:#555;">${esc(row.note||'')}</td>
+        <td style="border:1px solid #ddd;padding:3px 6px;font-size:11px;color:#4a2d6b;font-weight:600;">${esc(row.pers||'')}</td>
+      </tr>`;
+    });
+
+    // riga totali
+    let totCells='';
+    activeProd.forEach(p=>{
+      p.imballi.forEach(imb=>{
+        const tot=rows.reduce((s,row)=>s+parseInt((row.qtys||{})[p.id]?.[imb]||0),0);
+        const bg=(p.colorLightByImb&&p.colorLightByImb[imb])||p.colorLight;
+        totCells+=`<td style="text-align:center;font-weight:700;background:${bg};border:1px solid #999;">${tot||''}</td>`;
+      });
+    });
+    tbody+=`<tr class="no-print" style="background:#f0f0f0;">
+      <td style="font-weight:700;border:1px solid #999;padding:3px 6px;">TOTALE</td>
+      ${totCells}
+      <td style="text-align:center;font-weight:700;border:1px solid #999;">${grandTotal}</td>
+      <td style="border:1px solid #999;"></td><td style="border:1px solid #999;"></td><td style="border:1px solid #999;"></td>
+    </tr></tbody>`;
+
+    html += `<div class="prod-section print-section">
+      <div class="prod-date-header">
+        <h3>📅 Lavorazione: <strong>${label}${dow}</strong>
+          <span style="font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted);margin-left:12px;">${rows.length} clienti</span>
+        </h3>
+      </div>
+      <div class="print-header print-only" style="margin-bottom:10px;border-bottom:2px solid #000;padding-bottom:6px;">
+        <strong style="font-size:15px;">Siculabrioche · Foglio di Produzione</strong><br>
+        <span>Lavorazione: <strong>${label}${dow}</strong> · ${rows.length} clienti${filterCorriere && filterCorriere!=='__vuoto__' ? ' · Corriere: <strong>'+filterCorriere+'</strong>' : ''}</span>
+      </div>
+      ${cards}
+      ${printSummary}
+      <div class="print-client-table">
+        <table class="print-table">${thead}${tbody}</table>
+      </div>
+    </div>`;
+  });
+
+  if(!html) html='<div class="empty">Nessun ordine per la data selezionata.</div>';
+  el.innerHTML = html;
+}
+
+
+function flashMsg(msg){
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText='position:fixed;bottom:24px;right:24px;background:var(--green);color:#fff;padding:10px 18px;border-radius:6px;font-weight:600;z-index:9999;';
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 2500);
+}
+
+// ══════════════════════════════════════════
+// BACKUP AUTOMATICO — 8:30 e 17:30
+// ══════════════════════════════════════════
+function doAutoBackup(){
+  try{
+    const data = JSON.stringify({orders, clients}, null, 2);
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0,10);
+    const timeStr = now.getHours().toString().padStart(2,'0') + now.getMinutes().toString().padStart(2,'0');
+    const blob = new Blob([data], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ordini-backup-${dateStr}-${timeStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    flashMsg('💾 Backup automatico salvato');
+    // Salva timestamp ultimo backup
+    try{ localStorage.setItem('last_auto_backup', now.toISOString()); } catch(e){}
+  } catch(e){
+    console.warn('Auto backup failed:', e);
+  }
+}
+
+function scheduleAutoBackup(){
+  const checkInterval = 60000; // controlla ogni minuto
+
+  setInterval(()=>{
+    const now = new Date();
+    const h = now.getHours();
+    const m = now.getMinutes();
+
+    // Ore 8:30 o 17:30
+    const isBackupTime = (h === 8 && m === 30) || (h === 17 && m === 30);
+    if(!isBackupTime) return;
+
+    // Evita di farlo più volte nello stesso minuto
+    try{
+      const lastBackup = localStorage.getItem('last_auto_backup');
+      if(lastBackup){
+        const lastDate = new Date(lastBackup);
+        const diffMin = (now - lastDate) / 60000;
+        if(diffMin < 2) return; // già fatto meno di 2 minuti fa
+      }
+    } catch(e){}
+
+    doAutoBackup();
+  }, checkInterval);
+}
+
+function removeClient(cod){
+  if(!confirm('Eliminare questo cliente?')) return;
+  clients = clients.filter(c=>c.cod!==cod);
+  renderAnagrafica();
+  notifyChange();
+}
+
+// ══════════════════════════════════════════
+// STORICO CLIENTE
+// ══════════════════════════════════════════
+let storicoAcItems = [];
+let storicoSelected = null;
+
+function renderStorico(clientCod, clientNome){
+  const el = document.getElementById('storicoContent');
+  if(!clientCod && !clientNome){ el.innerHTML='<div class="empty">Cerca un cliente per vedere tutti i suoi ordini.</div>'; return; }
+
+  // Raccoglie tutti gli ordini del cliente da tutte le sessioni
+  const found = [];
+  Object.values(orders).forEach(ses=>{
+    (ses.rows||[]).forEach(row=>{
+      const match = clientCod
+        ? row.clientCod === clientCod
+        : row.clientNome && row.clientNome.toUpperCase() === clientNome.toUpperCase();
+      if(!match) return;
+      let totPz = 0;
+      PRODUCTS.forEach(p=>{ p.imballi.forEach(imb=>{ totPz += parseInt((row.qtys||{})[p.id]?.[imb]||0)*p.pz_per_imballo[imb]; }); });
+      found.push({ date: ses.date||'', row, totPz });
+    });
+  });
+
+  found.sort((a,b)=>b.date.localeCompare(a.date));
+
+  if(!found.length){
+    el.innerHTML=`<div class="empty">Nessun ordine trovato per <strong>${esc(clientNome)}</strong>.</div>`;
+    return;
+  }
+
+  const fmtD = d=>{ if(!d) return '—'; const [y,m,g]=d.split('-'); return `${g}/${m}/${y}`; };
+
+  let html = `<div style="margin-bottom:18px;">
+    <h3 style="font-family:Georgia,serif;font-size:20px;font-weight:400;margin-bottom:4px;">
+      ${esc(clientNome)}
+      ${clientCod?`<span style="font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:8px;">#${esc(clientCod)}</span>`:''}
+    </h3>
+    <div style="font-family:var(--mono);font-size:11px;color:var(--muted);">${found.length} ordini trovati</div>
+  </div>`;
+
+  // Calcola totali complessivi
+  const totali = {};
+  PRODUCTS.forEach(p=>{ totali[p.id]={}; p.imballi.forEach(imb=>totali[p.id][imb]=0); });
+  let grandTot = 0;
+  found.forEach(({row,totPz})=>{
+    grandTot += totPz;
+    PRODUCTS.forEach(p=>{ p.imballi.forEach(imb=>{ totali[p.id][imb]+=parseInt((row.qtys||{})[p.id]?.[imb]||0); }); });
+  });
+
+  // Riepilogo totali
+  html += `<div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;">
+    <div style="font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:10px;">Totale cumulativo — tutti gli ordini</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">`;
+  PRODUCTS.forEach(p=>{
+    let pz=0; p.imballi.forEach(imb=>pz+=totali[p.id][imb]*p.pz_per_imballo[imb]);
+    if(!pz) return;
+    html+=`<div style="background:${p.colorLight};border:1px solid ${p.color}33;border-radius:4px;padding:6px 12px;text-align:center;">
+      <div style="font-size:10px;color:${p.color};font-weight:700;text-transform:uppercase;">${p.name}</div>
+      <div style="font-family:var(--mono);font-size:16px;font-weight:700;">${pz}</div>
+      <div style="font-size:10px;color:var(--muted);">pz</div>
+    </div>`;
+  });
+  html += `<div style="background:var(--accent-soft,#fef2ef);border:1px solid var(--accent);border-radius:4px;padding:6px 12px;text-align:center;margin-left:auto;">
+    <div style="font-size:10px;color:var(--accent);font-weight:700;">TOTALE PZ</div>
+    <div style="font-family:Georgia,serif;font-size:22px;color:var(--accent);">${grandTot}</div>
+  </div>`;
+  html += `</div></div>`;
+
+  // Lista ordini
+  html += `<div style="display:flex;flex-direction:column;gap:10px;">`;
+  found.forEach(({date, row, totPz})=>{
+    const dow = date ? ['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][new Date(date+'T00:00:00').getDay()] : '';
+    const corrBg = row.corriere==='BRT'?'#c84b2f':row.corriere==='GLS'?'#2d5fa8':'#888';
+    const corrShow = row.corriere ? `<span style="background:${corrBg};color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;margin-left:8px;">${row.corriere}</span>` : '';
+
+    let prodList = '';
+    PRODUCTS.forEach(p=>{
+      p.imballi.forEach(imb=>{
+        const v=parseInt((row.qtys||{})[p.id]?.[imb]||0);
+        if(!v) return;
+        prodList+=`<span style="background:${p.colorLight};border:1px solid ${p.color}44;border-radius:3px;padding:2px 7px;font-size:12px;margin:2px;">
+          <span style="color:${p.color};font-weight:700;">${p.name}</span> ${imb}×${v}
+        </span>`;
+      });
+    });
+
+    html += `<div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+        <span style="font-family:Georgia,serif;font-size:15px;font-weight:400;">📅 ${fmtD(date)}${dow?' — '+dow:''}</span>
+        ${corrShow}
+        ${row.lotto?`<span style="font-family:var(--mono);font-size:11px;color:var(--green);border:1px solid var(--green);border-radius:3px;padding:1px 6px;">L.${esc(row.lotto)}</span>`:''}
+        <span style="margin-left:auto;font-family:var(--mono);font-size:14px;font-weight:700;color:var(--accent);">${totPz} pz</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:${row.note||row.pers?'8px':'0'};">${prodList||'<span style="color:var(--muted);font-size:12px;">Nessun prodotto inserito</span>'}</div>
+      ${row.note?`<div style="font-size:12px;color:var(--muted);font-style:italic;">📝 ${esc(row.note)}</div>`:''}
+      ${row.pers?`<div style="font-size:12px;color:#4a2d6b;font-weight:600;">🏷 ${esc(row.pers)}</div>`:''}
+    </div>`;
+  });
+  html += `</div>`;
+
+  el.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+// CONFEZIONAMENTO
+// ══════════════════════════════════════════
+// Mappa shelf-life per personalizzazione (sovrascrive i default)
+const SHELF_LIFE_MAP = {
+  'francese': 120, 'spagnola': 120, 'tedesco': 120, 'inglese': 120, 'rumena': 120, 'polacco': 120,
+  'romana mini': 60,
+  'romana cioccolato': 45, 'la romana cioccolato': 45,
+  'romana': 90, 'la romana': 90,
+  '120 giorni': 120,
+};
+
+function getShelfLife(pers){
+  if(!pers) return 90;
+  // Prima controlla anagrafica personalizzazioni (localStorage)
+  const anag = getPersAnagrafica();
+  const found = anag.find(p=>p.nome.toLowerCase()===pers.toLowerCase().trim());
+  if(found && found.giorni) return found.giorni;
+  // Fallback alla mappa statica
+  return SHELF_LIFE_MAP[pers.toLowerCase().trim()] || 90;
+}
+
+function getPersAnagrafica(){
+  try{
+    const saved = localStorage.getItem('pers_anagrafica');
+    if(saved) return JSON.parse(saved);
+  } catch(e){}
+  // Default: build from PERSONALIZZAZIONI + SHELF_LIFE_MAP
+  return PERSONALIZZAZIONI.map(nome=>({
+    nome,
+    giorni: SHELF_LIFE_MAP[nome.toLowerCase()] || 90
+  }));
+}
+
+function savePersAnagrafica(list){
+  try{
+    localStorage.setItem('pers_anagrafica', JSON.stringify(list));
+    // Aggiorna anche PERSONALIZZAZIONI
+    PERSONALIZZAZIONI = list.map(p=>p.nome);
+    // Aggiorna localStorage custom (per compatibilità)
+    const base = ["Francese","Spagnola","Tedesco","Inglese","Rumena","Polacco","Romana","Romana Cioccolato","Cartone Neutro","Briosce chiare","120 Giorni"];
+    const extras = list.map(p=>p.nome).filter(n=>!base.includes(n));
+    localStorage.setItem('pers_custom', JSON.stringify(extras));
+  } catch(e){}
+}
+
+const ESTERO_PERS = ['francese','spagnola','tedesco','inglese','rumena','polacco'];
+
+function calcScadenza(row){
+  const persLower = (row.pers||'').toLowerCase().trim();
+  const results = [];
+  const qtys = row.qtys || {};
+
+  const hasProd = (id) => qtys[id] && Object.values(qtys[id]).some(v=>parseInt(v||0)>0);
+
+  // 1. Personalizzazione estera → 120gg (prende precedenza su tutto)
+  if(ESTERO_PERS.includes(persLower)){
+    results.push({ etichetta: row.pers, giorni: 120 });
+    return results;
+  }
+
+  // 2. Romana Cioccolato → 45gg
+  if(hasProd('romanachoco')){
+    results.push({ etichetta: 'LA ROMANA CIOCCOLATO', giorni: 45 });
+  }
+
+  // 3. Romana Mini → 60gg, sempre cartone neutro 26
+  if(hasProd('romanamini')){
+    results.push({ etichetta: 'ROMANA MINI', giorni: 60 });
+  }
+
+  // 4. Romana classica → 90gg
+  if(hasProd('romana')){
+    results.push({ etichetta: 'LA ROMANA', giorni: 90 });
+  }
+
+  // 5. Personalizzazione (non estera) → usa anagrafica per giorni
+  if(row.pers && row.pers.trim()){
+    const giorni = getShelfLife(row.pers);
+    results.push({ etichetta: row.pers, giorni });
+  }
+
+  // 6. Se non c'è nessuna delle precedenti → Standard
+  if(results.length === 0){
+    results.push({ etichetta: 'SICULABRIOSCE STANDARD', giorni: 90 });
+  }
+
+  return results;
+}
+
+function addDays(dateStr, days){
+  if(!dateStr || dateStr==='__senza_data__') return '';
+  try{
+    const d = new Date(dateStr+'T00:00:00');
+    if(isNaN(d.getTime())) return '';
+    d.setDate(d.getDate()+days);
+    return d.toISOString().slice(0,10);
+  } catch(e){ return ''; }
+}
+
+function fmtDateConf(d){
+  if(!d) return '—';
+  const [y,m,g]=d.split('-');
+  return `${g}/${m}/${y}`;
+}
+
+function renderConfezionamento(){
+  const el = document.getElementById('confContent');
+
+  const byDate = {};
+  Object.values(orders).forEach(ses=>{
+    (ses.rows||[]).forEach(row=>{
+      const date = row.dataLav || row.dataRic || ses.date || '__senza_data__';
+      if(!byDate[date]) byDate[date]=[];
+      byDate[date].push(row);
+    });
+  });
+
+  const sortedDates = Object.keys(byDate).sort((a,b)=>{
+    if(a==='__senza_data__') return 1;
+    if(b==='__senza_data__') return -1;
+    return a.localeCompare(b);
+  });
+
+  if(!sortedDates.length){
+    el.innerHTML = '<div class="empty">Nessun ordine inserito.</div>';
+    return;
+  }
+
+  const filterEl = document.getElementById('confFilterDate');
+  const filterDate = filterEl ? filterEl.value : '';
+  const datesToShow = filterDate ? sortedDates.filter(d=>d===filterDate) : sortedDates;
+
+  let html = '';
+
+  datesToShow.forEach(dateKey=>{
+    const rows = byDate[dateKey];
+    if(!rows || !rows.length) return;
+    const label = dateKey==='__senza_data__' ? 'Data non specificata' : fmtDateConf(dateKey);
+    const dow = dateKey!=='__senza_data__' ? ' — '+['Dom','Lun','Mar','Mer','Gio','Ven','Sab'][new Date(dateKey+'T00:00:00').getDay()] : '';
+
+    // ── Raggruppa per etichetta: una riga per etichetta con totale pz ──
+    const byLabel = {};
+    rows.forEach(row=>{
+      const scs = calcScadenza(row);
+      // Calcola pz totali della riga
+      let rowPz = 0;
+      PRODUCTS.forEach(p=>{ p.imballi.forEach(imb=>{ rowPz += parseInt((row.qtys||{})[p.id]?.[imb]||0)*p.pz_per_imballo[imb]; }); });
+      scs.forEach(sc=>{
+        if(!byLabel[sc.etichetta]){
+          byLabel[sc.etichetta] = { giorni: sc.giorni, rows: [], totPz: 0 };
+        }
+        // Evita di aggiungere la stessa riga più volte per la stessa etichetta
+        if(!byLabel[sc.etichetta].rows.includes(row)){
+          byLabel[sc.etichetta].rows.push(row);
+          byLabel[sc.etichetta].totPz += rowPz;
+        }
+      });
+    });
+
+    // ── Totale imballi: standard/estero vs neutri (con personalizzazione) ──
+    const imballiTot    = {112:0, 52:0, 26:0, gross8:0, camp:0};
+    const imballiNeutri = {112:0, 52:0, 26:0};
+    rows.forEach(row=>{
+      const persLower = (row.pers||''). toLowerCase().trim();
+      const isEstero = ESTERO_PERS.includes(persLower);
+      const hasPers = row.pers && row.pers.trim() && !isEstero;
+      PRODUCTS.forEach(p=>{
+        if(p.id === 'romanamini') return; // gestita separatamente sotto
+        p.imballi.forEach(imb=>{
+          const v = parseInt((row.qtys||{})[p.id]?.[imb]||0);
+          if(v === 0) return;
+          if(hasPers && (imb===112||imb===52||imb===26)){
+            imballiNeutri[imb] += v;
+          } else if(imballiTot.hasOwnProperty(imb)){
+            imballiTot[imb] += v;
+          }
+        });
+      });
+    });
+    // Campionatura totale = GR.8 × 8 + campionature dirette
+    const campTotConf = (imballiTot.gross8 * 8) + imballiTot.camp;
+    // Romana, Romana Choco, Romana Mini → sempre neutri, spostarli da imballiTot a imballiNeutri
+    ['romana','romanachoco','romanamini'].forEach(pid=>{
+      rows.forEach(row=>{
+        const v = parseInt((row.qtys||{})[pid]?.['26']||0);
+        if(v===0) return;
+        // Se era finito in imballiTot (perché hasPers=false), spostalo in neutri
+        imballiNeutri[26] += v;
+        imballiTot[26] = Math.max(0, imballiTot[26] - v);
+      });
+      // per romana ha anche 52
+      if(pid==='romana'){
+        rows.forEach(row=>{
+          const v52 = parseInt((row.qtys||{})[pid]?.['52']||0);
+          if(v52===0) return;
+          imballiNeutri[52] += v52;
+          imballiTot[52] = Math.max(0, imballiTot[52] - v52);
+        });
+      }
+    });
+
+    html += `<div class="prod-section print-section">
+      <div class="prod-date-header">
+        <h3>📦 Confezionamento: <strong>${label}${dow}</strong>
+          <span style="font-family:var(--mono);font-size:11px;font-weight:400;color:var(--muted);margin-left:12px;">${rows.length} clienti</span>
+        </h3>
+      </div>
+      <div class="print-header print-only" style="margin-bottom:8px;border-bottom:2px solid #000;padding-bottom:6px;">
+        <strong style="font-size:14px;">Siculabrioche · Confezionamento</strong><br>
+        <span style="font-size:11px;">Spedizione: <strong>${label}${dow}</strong> · ${rows.length} clienti</span>
+      </div>`;
+
+    // ── Tabella unica stile registro lotti (come file originale) ──
+    const sortedLabels = Object.keys(byLabel).sort((a,b)=>{
+      if(a==='SICULABRIOSCE STANDARD') return 1;
+      if(b==='SICULABRIOSCE STANDARD') return -1;
+      return a.localeCompare(b);
+    });
+
+    html += `<table class="print-table conf-table" style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:16px;">
+      <thead>
+        <tr style="background:var(--ink);color:#fff;">
+          <th style="padding:6px 10px;text-align:left;">DATA SPEDIZIONE</th>
+          <th style="padding:6px 10px;text-align:left;">ETICHETTA / NAZIONALITÀ</th>
+          <th style="padding:6px 10px;text-align:center;">CLIENTI</th>
+          <th style="padding:6px 10px;text-align:center;">TOT PZ</th>
+          <th style="padding:6px 10px;text-align:center;">SHELF-LIFE</th>
+          <th style="padding:6px 10px;text-align:center;">SCADENZA</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    sortedLabels.forEach(lab=>{
+      const group = byLabel[lab];
+      const scadenza = addDays(dateKey, group.giorni);
+      let totPzLabel = group.totPz || 0;
+      const isStandard = lab==='SICULABRIOSCE STANDARD';
+      html += `<tr style="border-bottom:1px solid var(--line);${isStandard?'background:#faf8f4;':''}">
+        <td style="padding:6px 10px;font-family:var(--mono);font-size:11px;">${fmtDateConf(dateKey)}</td>
+        <td style="padding:6px 10px;font-weight:700;${isStandard?'color:var(--muted);':''}">${esc(lab)}</td>
+        <td style="padding:6px 10px;text-align:center;">${group.rows.length}</td>
+        <td style="padding:6px 10px;text-align:center;font-weight:700;color:var(--accent);">${totPzLabel}</td>
+        <td style="padding:6px 10px;text-align:center;font-family:var(--mono);">${group.giorni} gg</td>
+        <td style="padding:6px 10px;text-align:center;font-family:var(--mono);font-weight:700;">${fmtDateConf(scadenza)}</td>
+      </tr>`;
+    });
+
+    html += `</tbody></table>`;
+
+    // ── Riepilogo imballi complessivi ──
+    html += `<div style="display:flex;gap:12px;align-items:center;margin-bottom:6px;">
+      <span style="font-family:Georgia,serif;font-size:15px;color:var(--muted);">Imballi totali da preparare:</span>
+    </div>
+    <table class="print-table" style="border-collapse:collapse;font-size:13px;margin-bottom:24px;">
+      <thead><tr>
+        <th colspan="6" style="background:#333;color:#fff;padding:5px 10px;text-align:left;font-size:11px;">IMBALLI STANDARD (senza personalizzazione / estero)</th>
+        <th colspan="6" style="background:#5a3a7a;color:#fff;padding:5px 10px;text-align:left;font-size:11px;">IMBALLI NEUTRI (con personalizzazione)</th>
+        ${imballiTot.gross8>0||campTotConf>0?`<th colspan="${(imballiTot.gross8>0?2:0)+(campTotConf>0?2:0)}" style="background:#8b4513;color:#fff;padding:5px 10px;text-align:left;font-size:11px;">CAMPIONATURA</th>`:''}
+      </tr></thead>
+      <tbody><tr>
+        <th style="background:#c84b2f;color:#fff;padding:6px 14px;">112</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${imballiTot[112]}</td>
+        <th style="background:#2d5fa8;color:#fff;padding:6px 14px;">52</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${imballiTot[52]}</td>
+        <th style="background:#1a7a4a;color:#fff;padding:6px 14px;">26</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${imballiTot[26]}</td>
+        <th style="background:#7a4a9a;color:#fff;padding:6px 14px;">112N</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${imballiNeutri[112]}</td>
+        <th style="background:#5a3a8a;color:#fff;padding:6px 14px;">52N</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${imballiNeutri[52]}</td>
+        <th style="background:#3a2a7a;color:#fff;padding:6px 14px;">26N</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${imballiNeutri[26]}</td>
+        ${imballiTot.gross8>0?`<th style="background:#b87c1a;color:#fff;padding:6px 14px;">GR.8</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${imballiTot.gross8}</td>`:''}
+        ${campTotConf>0?`<th style="background:#8b4513;color:#fff;padding:6px 14px;">CAMP.</th>
+        <td style="padding:6px 14px;font-weight:700;font-size:16px;border:1px solid var(--line);">${campTotConf}</td>`:''}
+      </tr></tbody>
+    </table>`;
+
+    // ── Dettaglio clienti per etichetta (sotto, collassabile visivamente con indentazione) ──
+    html += `<details class="no-print" style="margin-bottom:20px;">
+      <summary style="cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:6px 0;">
+        ▸ Mostra dettaglio clienti per etichetta
+      </summary>
+      <div style="margin-top:10px;">`;
+
+    sortedLabels.forEach(lab=>{
+      const group = byLabel[lab];
+      html += `<div style="margin-bottom:14px;">
+        <div style="font-weight:700;font-size:12px;color:var(--ink);margin-bottom:4px;">${esc(lab)}</div>
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
+          <tbody>`;
+      group.rows.forEach(row=>{
+        let totPz=0;
+        PRODUCTS.forEach(p=>{ p.imballi.forEach(imb=>{ totPz += parseInt((row.qtys||{})[p.id]?.[imb]||0)*p.pz_per_imballo[imb]; }); });
+        html += `<tr style="border-bottom:1px solid var(--line);">
+          <td style="padding:3px 8px;">${row.clientCod?`<span style="color:var(--muted);font-family:var(--mono);">${esc(row.clientCod)}</span> `:''}${esc(row.clientNome||'')}</td>
+          <td style="padding:3px 8px;text-align:right;font-weight:600;">${totPz} pz</td>
+        </tr>`;
+      });
+      html += `</tbody></table></div>`;
+    });
+
+    html += `</div></details></div>`;
+  });
+
+  el.innerHTML = html || '<div class="empty">Nessun ordine per la data selezionata.</div>';
+}
+
+
+function renderAnagrafica(){
+  const banner = document.getElementById('firstRunBanner');
+  if(banner) banner.style.display = clients.length===0 ? 'block' : 'none';
+
+  const q = (document.getElementById('anagSearch').value||'').trim().toLowerCase();
+  filteredClients = q
+    ? clients.filter(c=>c.nome.toLowerCase().includes(q)||c.cod.includes(q))
+    : clients;
+
+  document.getElementById('anagCount').textContent = `${filteredClients.length.toLocaleString()} clienti`;
+
+  const page = filteredClients.slice(0, (anagPage+1)*ANAG_PAGE_SIZE);
+  document.getElementById('anagBody').innerHTML = page.map(c=>`
+    <tr>
+      <td style="font-family:var(--mono);font-size:12px;">${esc(c.cod)}</td>
+      <td>${esc(c.nome)}</td>
+      <td><button class="btn sm" onclick="removeClient('${esc(c.cod)}')">🗑</button></td>
+    </tr>
+  `).join('') + (filteredClients.length > page.length
+    ? `<tr><td colspan="3" style="text-align:center;padding:12px;">
+        <button class="btn" onclick="anagPage++;renderAnagrafica();">Mostra altri…</button>
+      </td></tr>`
+    : '');
+}
+
+// ══════════════════════════════════════════
+// STORAGE — Firebase (sync) + localStorage (fallback)
+// ══════════════════════════════════════════
+const STORAGE_KEY = 'ordini_siculabrioche_v1';
+let db = null;
+let isSaving = false;
+let isRemoteUpdate = false;
+let saveDebounce = null;
+
+function saveLocal(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify({orders,clients})); } catch(e){}
+}
+
+function loadLocal(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      const data = JSON.parse(raw);
+      if(data.clients && Array.isArray(data.clients)) clients = data.clients;
+      if(data.orders) orders = data.orders;
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
+function initFirebase(){
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+
+    notifyChange = ()=>{
+      if(isRemoteUpdate) return;
+      cleanEmptySessions();
+      saveLocal();
+      setSyncStatus('saving','Salvataggio…');
+      if(saveDebounce) clearTimeout(saveDebounce);
+      saveDebounce = setTimeout(()=>{
+        isSaving = true;
+        // Salva solo la sessione corrente + clienti, non sovrascrive tutto
+        const updates = {};
+        updates[`ordini_siculabrioche/v1/clients`] = clients;
+        if(currentSession && orders[currentSession]){
+          updates[`ordini_siculabrioche/v1/orders/${currentSession}`] = orders[currentSession];
+        }
+        db.ref().update(updates)
+          .then(()=>{ setSyncStatus('ok','Sincronizzato ✓'); isSaving=false; saveDebounce=null; })
+          .catch(()=>{ setSyncStatus('err','Errore sync'); isSaving=false; });
+      }, 1200);
+    };
+
+    let firstLoad = true;
+
+    db.ref('ordini_siculabrioche/v1').on('value', snap=>{
+      // Durante un nostro salvataggio ignora l'echo
+      if(isSaving || saveDebounce){
+        document.getElementById('loading').classList.remove('vis');
+        setSyncStatus('ok','Sincronizzato ✓');
+        return;
+      }
+
+      const data = snap.val();
+
+      if(firstLoad){
+        firstLoad = false;
+        if(data && (data.orders || data.clients)){
+          // Firebase ha dati → usa quelli
+          isRemoteUpdate = true;
+          if(data.clients && Array.isArray(data.clients)) clients = data.clients;
+          if(data.orders) orders = data.orders;
+          saveLocal();
+          setTimeout(()=>{ isRemoteUpdate=false; }, 0);
+          // Pulisci sessioni vuote e risalva su Firebase
+          const vuotePrima = Object.keys(orders).filter(k=>!(orders[k].rows||[]).length && k!==currentSession);
+          if(vuotePrima.length){
+            vuotePrima.forEach(k=>delete orders[k]);
+            saveLocal();
+            db.ref('ordini_siculabrioche/v1').set({orders, clients}).catch(()=>{});
+          }
+        } else {
+          // Firebase vuoto → carica i dati locali
+          const hasLocalData = Object.keys(orders).length > 0 || clients.length > 0;
+          if(hasLocalData){
+            setSyncStatus('saving','Caricamento dati su Firebase…');
+            db.ref('ordini_siculabrioche/v1').set({orders, clients})
+              .then(()=>setSyncStatus('ok','Dati caricati ✓'))
+              .catch(()=>setSyncStatus('err','Errore caricamento'));
+          }
+        }
+      } else {
+        // Aggiornamento da un'altra persona
+        isRemoteUpdate = true;
+        if(data){
+          if(data.clients && Array.isArray(data.clients)) clients = data.clients;
+          if(data.orders) orders = data.orders;
+          // Pulisci anche gli aggiornamenti in arrivo
+          const vuote = Object.keys(orders).filter(k=>!(orders[k].rows||[]).length && k!==currentSession);
+          vuote.forEach(k=>delete orders[k]);
+          saveLocal();
+        }
+        setTimeout(()=>{ isRemoteUpdate=false; }, 0);
+      }
+
+      document.getElementById('loading').classList.remove('vis');
+      setSyncStatus('ok','Connesso ✓');
+      ensureSession();
+      renderSessionSelector();
+
+      // Re-render solo se non stai digitando in una cella
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (activeEl.classList.contains('qty-input') ||
+                                     activeEl.classList.contains('meta-input') ||
+                                     activeEl.classList.contains('note-input') ||
+                                     activeEl.classList.contains('ac-input'));
+      if(!isTyping){
+        renderGrid();
+        renderProduzione();
+        renderAnagrafica();
+        updateBriocheCounter();
+      } else {
+        // Aggiorna solo i totali senza distruggere il DOM
+        setSyncStatus('ok','Connesso ✓ (aggiornamento in attesa…)');
+        // Quando l'utente finisce di digitare, aggiorna
+        const waitForBlur = ()=>{
+          renderGrid();
+          renderProduzione();
+          updateBriocheCounter();
+          activeEl.removeEventListener('blur', waitForBlur);
+        };
+        activeEl.addEventListener('blur', waitForBlur);
+      }
+
+    }, err=>{
+      console.warn('Firebase error:', err);
+      document.getElementById('loading').classList.remove('vis');
+      setSyncStatus('err','Offline · dati locali');
+      fallbackInit();
+    });
+
+  } catch(e){
+    console.warn('Firebase init error:', e);
+    document.getElementById('loading').classList.remove('vis');
+    setSyncStatus('err','Offline · dati locali');
+    fallbackInit();
+  }
+}
+
+function fallbackInit(){
+  notifyChange = ()=>{ cleanEmptySessions(); saveLocal(); setSyncStatus('ok','Salvato localmente ✓'); };
+  loadLocal();
+  ensureSession();
+  renderSessionSelector();
+  renderGrid();
+  renderProduzione();
+  renderAnagrafica();
+  updateBriocheCounter();
+}
+
+
+// ── Event listeners ──
+document.getElementById('btnExportPdf').addEventListener('click', ()=>window.print());
+document.getElementById('btnPrintProd').addEventListener('click', ()=>window.print());
+
+document.getElementById('btnConfClearFilter').addEventListener('click', ()=>{
+  document.getElementById('confFilterDate').value='';
+  renderConfezionamento();
+});
+document.getElementById('confFilterDate').addEventListener('change', ()=>renderConfezionamento());
+document.getElementById('btnPrintConf').addEventListener('click', ()=>window.print());
+
+document.getElementById('btnProdClearFilter').addEventListener('click', ()=>{
+  document.getElementById('prodFilterDate').value='';
+  document.getElementById('prodFilterCorriere').value='';
+  renderProduzione();
+});
+document.getElementById('prodFilterDate').addEventListener('change', ()=>renderProduzione());
+document.getElementById('prodFilterCorriere').addEventListener('change', ()=>renderProduzione());
+
+document.getElementById('btnBackup').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify({orders, clients}, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='ordini-backup-'+todayStr()+'.json';
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+  flashMsg('Backup scaricato ✓');
+});
+
+document.getElementById('btnRestore').addEventListener('change', function(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const data = JSON.parse(ev.target.result);
+      if(data.clients && Array.isArray(data.clients)) clients = data.clients;
+      if(data.orders) orders = data.orders;
+      saveLocal();
+      ensureSession();
+      renderGrid();
+      renderProduzione();
+      renderAnagrafica();
+      // Salva subito su Firebase così tutte le colleghe vedono i dati
+      if(db){
+        setSyncStatus('saving','Caricamento su Firebase…');
+        db.ref('ordini_siculabrioche/v1').set({orders, clients})
+          .then(()=>{ setSyncStatus('ok','Dati condivisi ✓'); flashMsg('✓ Dati ripristinati e condivisi con tutte le colleghe!'); })
+          .catch(()=>{ flashMsg('Dati ripristinati localmente (errore Firebase)'); });
+      } else {
+        flashMsg('✓ Dati ripristinati');
+      }
+    } catch(err){ alert('File non valido.'); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+});
+
+document.getElementById('btnNewSession').addEventListener('click', ()=>{
+  const today = todayStr();
+  const date = today;
+  if(!confirm(`Avviare una nuova sessione per il ${fmtDateSimple(date)}?\nLa sessione corrente viene conservata.`)) return;
+  // Crea la nuova sessione
+  currentSession = 'ses_'+date.replace(/-/g,'')+'_'+Math.random().toString(36).slice(2,6);
+  orders[currentSession] = { date, rows:[] };
+  // Aggiorna il campo data DOPO aver cambiato currentSession, senza triggare il listener
+  const sessionDateEl = document.getElementById('sessionDate');
+  sessionDateEl.value = date;
+  renderSessionSelector();
+  renderGrid();
+  renderProduzione();
+  notifyChange();
+});
+
+document.getElementById('sessionSelector').addEventListener('change', function(){
+  const id = this.value; if(!id) return;
+  currentSession = id;
+  // Aggiorna il campo data spedizione con la data della sessione selezionata
+  const ses = orders[id];
+  if(ses && ses.date) document.getElementById('sessionDate').value = ses.date;
+  renderGrid();
+  renderProduzione();
+});
+
+document.getElementById('btnDeleteSession').addEventListener('click', ()=>{
+  if(!currentSession || !orders[currentSession]) return;
+  const ses = orders[currentSession];
+  if(!confirm(`Eliminare la sessione del ${fmtDateSimple(ses.date)} con ${(ses.rows||[]).length} clienti?`)) return;
+  delete orders[currentSession];
+  currentSession = null;
+  ensureSession();
+  renderSessionSelector();
+  renderGrid();
+  renderProduzione();
+  renderConfezionamento();
+  notifyChange();
+});
+
+document.getElementById('btnDeleteEmptySessions').addEventListener('click', ()=>{
+  const vuote = Object.keys(orders).filter(k=> !(orders[k].rows||[]).length);
+  if(!vuote.length){ alert('Nessuna sessione vuota da eliminare.'); return; }
+  if(!confirm(`Eliminare ${vuote.length} sessioni vuote (0 clienti)?`)) return;
+  vuote.forEach(k=>{ if(k !== currentSession) delete orders[k]; });
+  renderSessionSelector();
+  renderGrid();
+  renderProduzione();
+  renderConfezionamento();
+  notifyChange();
+  flashMsg(`✓ ${vuote.length} sessioni vuote eliminate`);
+});
+
+document.getElementById('btnPurgeByDate').addEventListener('click', ()=>{
+  // Mostra un dialog per scegliere l'intervallo di date
+  const dialog = document.createElement('div');
+  dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  dialog.innerHTML = `
+    <div style="background:#fff;border-radius:8px;padding:28px 32px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <h3 style="margin:0 0 6px;font-family:Georgia,serif;font-size:18px;">🧹 Pulizia sessioni per data</h3>
+      <p style="margin:0 0 18px;font-size:13px;color:#666;">Elimina definitivamente tutte le sessioni (con o senza clienti) nel periodo indicato. <strong>L'operazione è irreversibile.</strong></p>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;">
+        <label style="font-size:12px;color:#888;min-width:40px;">Dal</label>
+        <input type="date" id="purgeFrom" style="flex:1;padding:7px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:20px;">
+        <label style="font-size:12px;color:#888;min-width:40px;">Al</label>
+        <input type="date" id="purgeTo" style="flex:1;padding:7px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+      </div>
+      <div id="purgePreview" style="font-size:12px;color:#c0392b;margin-bottom:16px;min-height:18px;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button id="purgeCancelBtn" style="padding:8px 18px;border:1px solid #ccc;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;">Annulla</button>
+        <button id="purgeConfirmBtn" style="padding:8px 18px;border:none;border-radius:4px;background:#c0392b;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Elimina definitivamente</button>
+      </div>
+    </div>`;
+  document.body.appendChild(dialog);
+
+  const fromEl = dialog.querySelector('#purgeFrom');
+  const toEl   = dialog.querySelector('#purgeTo');
+  const preview = dialog.querySelector('#purgePreview');
+
+  // Pre-imposta date con il range delle sessioni esistenti
+  const dates = Object.values(orders).map(s=>s.date).filter(Boolean).sort();
+  if(dates.length){ fromEl.value = dates[0]; toEl.value = dates[dates.length-1]; }
+
+  function updatePreview(){
+    const from = fromEl.value, to = toEl.value;
+    if(!from || !to){ preview.textContent = ''; return; }
+    const toDelete = Object.keys(orders).filter(k=>{
+      const d = orders[k].date || '';
+      return d >= from && d <= to && k !== currentSession;
+    });
+    const conClienti = toDelete.filter(k=>(orders[k].rows||[]).length > 0).length;
+    const vuote = toDelete.length - conClienti;
+    preview.textContent = toDelete.length === 0
+      ? 'Nessuna sessione trovata in questo periodo.'
+      : `Verranno eliminate ${toDelete.length} sessioni (${conClienti} con clienti, ${vuote} vuote).`;
+  }
+
+  fromEl.addEventListener('change', updatePreview);
+  toEl.addEventListener('change', updatePreview);
+  updatePreview();
+
+  dialog.querySelector('#purgeCancelBtn').addEventListener('click', ()=> dialog.remove());
+
+  dialog.querySelector('#purgeConfirmBtn').addEventListener('click', ()=>{
+    const from = fromEl.value, to = toEl.value;
+    if(!from || !to){ alert('Inserisci entrambe le date.'); return; }
+    const toDelete = Object.keys(orders).filter(k=>{
+      const d = orders[k].date || '';
+      return d >= from && d <= to && k !== currentSession;
+    });
+    if(!toDelete.length){ alert('Nessuna sessione trovata.'); dialog.remove(); return; }
+    toDelete.forEach(k=> delete orders[k]);
+    saveLocal();
+    // Salva su Firebase per propagare la pulizia a tutti
+    if(db){
+      setSyncStatus('saving','Pulizia in corso…');
+      db.ref('ordini_siculabrioche/v1').set({orders, clients})
+        .then(()=>{ setSyncStatus('ok','Pulizia completata ✓'); })
+        .catch(()=>setSyncStatus('err','Errore salvataggio'));
+    }
+    ensureSession();
+    renderSessionSelector();
+    renderGrid();
+    renderProduzione();
+    renderConfezionamento();
+    dialog.remove();
+    flashMsg(`✓ ${toDelete.length} sessioni eliminate definitivamente`);
+  });
+
+  // Chiudi cliccando fuori
+  dialog.addEventListener('click', e=>{ if(e.target===dialog) dialog.remove(); });
+});
+
+document.getElementById('sessionDate').addEventListener('change', ()=>{
+  const date = document.getElementById('sessionDate').value;
+  if(!date) return;
+  // Cerca sessione esistente per questa data
+  const existing = Object.keys(orders).find(k=>orders[k].date===date && k!==currentSession);
+  if(existing){
+    // Passa alla sessione esistente con questa data
+    currentSession = existing;
+  } else {
+    // Aggiorna SOLO la data della sessione corrente, non toccare le altre
+    if(currentSession && orders[currentSession]){
+      orders[currentSession].date = date;
+    } else {
+      currentSession = null;
+      ensureSession();
+    }
+  }
+  renderSessionSelector();
+  renderGrid();
+  renderProduzione();
+  notifyChange();
+});
+
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    if(btn.dataset.tab==='produzione') renderProduzione();
+    if(btn.dataset.tab==='anagrafica') renderAnagrafica();
+    if(btn.dataset.tab==='storico') document.getElementById('storicoInput').focus();
+    if(btn.dataset.tab==='confezionamento') renderConfezionamento();
+  });
+});
+
+// Storico autocomplete
+document.getElementById('storicoInput').addEventListener('input', function(){
+  const q = this.value.trim().toLowerCase();
+  const list = document.getElementById('storicoList');
+  storicoSelected = null;
+  if(q.length < 2){ list.style.display='none'; return; }
+  storicoAcItems = clients.filter(c=>c.nome.toLowerCase().includes(q)||c.cod.toLowerCase().includes(q)).slice(0,40);
+  if(!storicoAcItems.length){ list.style.display='none'; return; }
+  list.innerHTML = storicoAcItems.map((c,i)=>
+    `<div class="ac-item" data-i="${i}">${esc(c.nome)}<span class="ac-cod">${esc(c.cod)}</span></div>`
+  ).join('');
+  list.style.display='block';
+});
+
+document.getElementById('storicoList').addEventListener('mousedown', function(e){
+  e.preventDefault();
+  const item = e.target.closest('.ac-item');
+  if(!item) return;
+  const c = storicoAcItems[+item.dataset.i];
+  storicoSelected = c;
+  document.getElementById('storicoInput').value = c.nome;
+  document.getElementById('storicoList').style.display='none';
+  renderStorico(c.cod, c.nome);
+});
+
+document.getElementById('storicoInput').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(storicoSelected){ renderStorico(storicoSelected.cod, storicoSelected.nome); return; }
+    if(storicoAcItems.length){ storicoSelected=storicoAcItems[0]; this.value=storicoAcItems[0].nome; document.getElementById('storicoList').style.display='none'; renderStorico(storicoAcItems[0].cod, storicoAcItems[0].nome); }
+  } else if(e.key==='Escape'){
+    document.getElementById('storicoList').style.display='none';
+  }
+});
+
+document.getElementById('storicoInput').addEventListener('blur', ()=>{
+  setTimeout(()=>{ document.getElementById('storicoList').style.display='none'; }, 150);
+});
+
+document.getElementById('btnStoricoSearch').addEventListener('click', ()=>{
+  if(storicoSelected) renderStorico(storicoSelected.cod, storicoSelected.nome);
+  else if(storicoAcItems.length){ renderStorico(storicoAcItems[0].cod, storicoAcItems[0].nome); }
+  else { const v=document.getElementById('storicoInput').value.trim(); if(v) renderStorico('',v); }
+});
+
+document.getElementById('btnStoricoClear').addEventListener('click', ()=>{
+  document.getElementById('storicoInput').value='';
+  storicoSelected=null; storicoAcItems=[];
+  document.getElementById('storicoContent').innerHTML='<div class="empty">Cerca un cliente per vedere tutti i suoi ordini.</div>';
+});
+
+document.getElementById('btnAddRow').addEventListener('click', ()=>{
+  const f = document.getElementById('addRowForm');
+  f.style.display = f.style.display==='none'?'flex':'none';
+  if(f.style.display==='flex') document.getElementById('acInput').focus();
+});
+
+document.getElementById('btnCancelAdd').addEventListener('click', ()=>{
+  document.getElementById('addRowForm').style.display='none';
+  document.getElementById('acInput').value='';
+  selectedClient=null;
+  document.getElementById('recentOrderAlert').style.display='none';
+});
+
+document.getElementById('briocheTotale').addEventListener('input', ()=>updateBriocheCounter());
+
+// Carica personalizzazioni salvate in localStorage
+try{
+  const saved = localStorage.getItem('pers_custom');
+  if(saved){
+    const extra = JSON.parse(saved);
+    extra.forEach(p=>{ if(!PERSONALIZZAZIONI.includes(p)) PERSONALIZZAZIONI.push(p); });
+  }
+} catch(e){}
+
+document.getElementById('btnAddPers').addEventListener('click', ()=>{
+  // Mostra modale anagrafica personalizzazioni
+  const dialog = document.createElement('div');
+  dialog.id = 'persAnagDialog';
+  dialog.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  dialog.innerHTML = `
+    <div style="background:#fff;border-radius:10px;padding:0;max-width:560px;width:95%;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.3);">
+      <div style="padding:20px 24px 14px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h3 style="margin:0;font-family:Georgia,serif;font-size:18px;">🏷 Anagrafica personalizzazioni</h3>
+          <p style="margin:4px 0 0;font-size:12px;color:#888;">Gestisci nomi e shelf-life. I giorni vengono usati automaticamente nel Confezionamento.</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button id="persAnagRefresh" style="padding:6px 12px;border:1px solid #1a7a4a;border-radius:5px;background:#1a7a4a;color:#fff;cursor:pointer;font-size:12px;font-weight:700;">🔄 Riaggiorna ordini</button>
+          <button id="persAnagClose" style="border:none;background:none;font-size:22px;cursor:pointer;color:#888;padding:0 4px;">×</button>
+        </div>
+      </div>
+      <div style="overflow-y:auto;flex:1;padding:16px 24px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;" id="persAnagTable">
+          <thead><tr style="border-bottom:2px solid #eee;">
+            <th style="text-align:left;padding:6px 8px;color:#888;font-size:11px;font-family:monospace;text-transform:uppercase;">Nome personalizzazione</th>
+            <th style="text-align:center;padding:6px 8px;color:#888;font-size:11px;font-family:monospace;text-transform:uppercase;width:90px;">Shelf-life (gg)</th>
+            <th style="text-align:center;padding:6px 8px;color:#888;font-size:11px;font-family:monospace;text-transform:uppercase;width:130px;">Imballo</th>
+            <th style="width:36px;"></th>
+          </tr></thead>
+          <tbody id="persAnagBody"></tbody>
+        </table>
+      </div>
+      <div style="padding:14px 24px;border-top:1px solid #eee;background:#fafafa;border-radius:0 0 10px 10px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input id="persAnagNewNome" placeholder="Nuova personalizzazione…" maxlength="60"
+            style="flex:1;min-width:160px;padding:8px 10px;border:1px solid #ccc;border-radius:5px;font-size:13px;">
+          <input id="persAnagNewGiorni" type="number" min="1" max="730" placeholder="gg" value="90"
+            style="width:70px;padding:8px;border:1px solid #ccc;border-radius:5px;font-size:13px;text-align:center;">
+          <select id="persAnagNewImballo" style="padding:8px;border:1px solid #ccc;border-radius:5px;font-size:12px;">
+            <option value="">— Imballo —</option>
+            <option value="26_sicula">26 Sicula</option>
+            <option value="52_sicula">52 Sicula</option>
+            <option value="112_sicula">112 Sicula</option>
+            <option value="camp">Campionatura</option>
+            <option value="gr8">GR.8</option>
+            <option value="26_neutro">26 Neutro</option>
+            <option value="52_neutro">52 Neutro</option>
+            <option value="112_neutro">112 Neutro</option>
+          </select>
+          <button id="persAnagAdd" style="padding:8px 14px;border:none;border-radius:5px;background:#4a2d6b;color:#fff;cursor:pointer;font-size:13px;font-weight:700;white-space:nowrap;">+ Aggiungi</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(dialog);
+
+  function renderAnagBody(){
+    const list = getPersAnagrafica();
+    const tbody = document.getElementById('persAnagBody');
+    tbody.innerHTML = list.map((p,i)=>`
+      <tr style="border-bottom:1px solid #f0f0f0;" data-i="${i}">
+        <td style="padding:7px 8px;">
+          <input class="panag-nome" data-i="${i}" value="${esc(p.nome)}" maxlength="60"
+            style="width:100%;border:1px solid #e0e0e0;border-radius:4px;padding:5px 7px;font-size:13px;background:${i%2===0?'#fff':'#fafafa'};">
+        </td>
+        <td style="padding:7px 8px;text-align:center;">
+          <input class="panag-giorni" data-i="${i}" type="number" min="1" max="730" value="${p.giorni||90}"
+            style="width:70px;border:1px solid #e0e0e0;border-radius:4px;padding:5px 7px;font-size:13px;text-align:center;background:${i%2===0?'#fff':'#fafafa'};">
+        </td>
+        <td style="padding:7px 8px;text-align:center;">
+          <select class="panag-imballo" data-i="${i}" style="width:120px;border:1px solid #e0e0e0;border-radius:4px;padding:5px 7px;font-size:12px;background:${i%2===0?'#fff':'#fafafa'};">
+            <option value="" ${!p.imballo?'selected':''}>— Nessuno —</option>
+            <option value="26_sicula" ${p.imballo==='26_sicula'?'selected':''}>26 Sicula</option>
+            <option value="52_sicula" ${p.imballo==='52_sicula'?'selected':''}>52 Sicula</option>
+            <option value="112_sicula" ${p.imballo==='112_sicula'?'selected':''}>112 Sicula</option>
+            <option value="camp" ${p.imballo==='camp'?'selected':''}>Campionatura</option>
+            <option value="gr8" ${p.imballo==='gr8'?'selected':''}>GR.8</option>
+            <option value="26_neutro" ${p.imballo==='26_neutro'?'selected':''}>26 Neutro</option>
+            <option value="52_neutro" ${p.imballo==='52_neutro'?'selected':''}>52 Neutro</option>
+            <option value="112_neutro" ${p.imballo==='112_neutro'?'selected':''}>112 Neutro</option>
+          </select>
+        </td>
+        <td style="padding:7px 8px;text-align:center;">
+          <button class="panag-del" data-i="${i}" style="border:none;background:none;cursor:pointer;color:#c0392b;font-size:16px;padding:2px 6px;" title="Elimina">🗑</button>
+        </td>
+      </tr>`).join('');
+
+    // Listeners inline editing
+    tbody.querySelectorAll('.panag-nome').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const list2 = getPersAnagrafica();
+        list2[+inp.dataset.i].nome = inp.value.trim();
+        savePersAnagrafica(list2);
+      });
+    });
+    tbody.querySelectorAll('.panag-giorni').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const list2 = getPersAnagrafica();
+        list2[+inp.dataset.i].giorni = parseInt(inp.value)||90;
+        savePersAnagrafica(list2);
+      });
+    });
+    tbody.querySelectorAll('.panag-imballo').forEach(sel=>{
+      sel.addEventListener('change', ()=>{
+        const list2 = getPersAnagrafica();
+        list2[+sel.dataset.i].imballo = sel.value;
+        savePersAnagrafica(list2);
+      });
+    });
+    tbody.querySelectorAll('.panag-del').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const list2 = getPersAnagrafica();
+        const nome = list2[+btn.dataset.i].nome;
+        if(!confirm(`Eliminare "${nome}"?`)) return;
+        list2.splice(+btn.dataset.i, 1);
+        savePersAnagrafica(list2);
+        renderAnagBody();
+      });
+    });
+  }
+  renderAnagBody();
+
+  // Add new
+  document.getElementById('persAnagAdd').addEventListener('click', ()=>{
+    const nome = document.getElementById('persAnagNewNome').value.trim();
+    const giorni = parseInt(document.getElementById('persAnagNewGiorni').value)||90;
+    const imballo = document.getElementById('persAnagNewImballo').value;
+    if(!nome){ document.getElementById('persAnagNewNome').focus(); return; }
+    const list = getPersAnagrafica();
+    if(list.find(p=>p.nome.toLowerCase()===nome.toLowerCase())){ alert('Esiste già.'); return; }
+    list.push({nome, giorni, imballo});
+    list.sort((a,b)=>a.nome.localeCompare(b.nome));
+    savePersAnagrafica(list);
+    document.getElementById('persAnagNewNome').value='';
+    document.getElementById('persAnagNewGiorni').value='90';
+    document.getElementById('persAnagNewImballo').value='';
+    renderAnagBody();
+    flashMsg(`✓ "${nome}" aggiunta (${giorni} gg)`);
+  });
+
+  document.getElementById('persAnagNewNome').addEventListener('keydown', e=>{
+    if(e.key==='Enter') document.getElementById('persAnagAdd').click();
+  });
+
+  document.getElementById('persAnagRefresh').addEventListener('click', ()=>{
+    renderConfezionamento();
+    renderProduzione();
+    flashMsg('✓ Confezionamento e Produzione aggiornati');
+  });
+
+  document.getElementById('persAnagClose').addEventListener('click', ()=>dialog.remove());
+  dialog.addEventListener('click', e=>{ if(e.target===dialog) dialog.remove(); });
+});
+
+
+document.getElementById('btnApplyDefaults').addEventListener('click', ()=>{
+  const lotto   = document.getElementById('defaultLotto').value.trim();
+  const dataRic = document.getElementById('defaultDataRic').value;
+  const dataLav = document.getElementById('defaultDataLav').value;
+
+  if(!lotto && !dataRic && !dataLav){
+    alert('Inserisci almeno un valore predefinito da applicare (Lotto, Data ric. o Data lav.)');
+    return;
+  }
+
+  const ses = getSession();
+  if(!(ses.rows||[]).length){ alert('Nessuna riga da aggiornare.'); return; }
+
+  const count = ses.rows.length;
+  if(!confirm(`Applicare i valori predefiniti a tutte le ${count} righe?\n(sovrascrive solo i campi che hai compilato sopra, lascia invariati gli altri)`)) return;
+
+  ses.rows.forEach(row=>{
+    if(lotto)   row.lotto   = lotto;
+    if(dataRic) row.dataRic = dataRic;
+    if(dataLav) row.dataLav = dataLav;
+  });
+
+  renderGrid();
+  notifyChange();
+  flashMsg(`✓ Valori applicati a ${count} righe`);
+});
+
+document.getElementById('anagSearch').addEventListener('input', ()=>{ anagPage=0; renderAnagrafica(); });
+
+document.getElementById('btnAddClient').addEventListener('click', ()=>{
+  const cod = prompt('Codice cliente:'); if(!cod) return;
+  const nome = prompt('Ragione sociale:'); if(!nome) return;
+  if(clients.find(c=>c.cod===cod)){ alert('Codice già esistente.'); return; }
+  clients.push({cod:cod.trim(), nome:nome.trim().toUpperCase()});
+  clients.sort((a,b)=>a.nome.localeCompare(b.nome));
+  renderAnagrafica();
+  notifyChange();
+});
+
+document.getElementById('anagUpload').addEventListener('change', function(e){
+  const file = e.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    let text = ev.target.result;
+    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+    const lines = text.split(/\r?\n/).filter(l=>l.trim());
+    const parsed = [];
+    lines.forEach((line,i)=>{
+      const low=line.toLowerCase();
+      if(i===0&&(low.includes('codice')||low.includes('ragione')||low.includes('code'))) return;
+      const parts=line.split(/[,;\t]/).map(s=>s.trim().replace(/^["']|["']$/g,''));
+      if(parts.length>=2&&parts[0]&&parts[1]) parsed.push({cod:parts[0],nome:parts[1].toUpperCase()});
+    });
+    if(parsed.length>0){
+      if(confirm(`Trovati ${parsed.length} clienti. Caricare?`)){
+        clients=parsed; renderAnagrafica(); notifyChange();
+        flashMsg(`✓ ${parsed.length} clienti caricati!`);
+      }
+    } else { alert('Nessun cliente trovato. Usa CSV con separatore ";"'); }
+  };
+  reader.readAsText(file,'utf-8');
+  e.target.value='';
+});
+
+// ── Operatore ──
+// ── Lista operatori salvata in localStorage ──
+function getOperatori(){
+  try{
+    const saved = localStorage.getItem('operatori_lista');
+    if(saved){
+      const list = JSON.parse(saved);
+      // Se contiene i vecchi nomi predefiniti, resetta
+      if(list.includes('Fabio') || list.includes('Collega 1')){
+        localStorage.removeItem('operatori_lista');
+      } else {
+        return list;
+      }
+    }
+  } catch(e){}
+  return ['Federica F.','Cafarella','Francesca','Erika','Angela'];
+}
+function saveOperatori(list){
+  try{ localStorage.setItem('operatori_lista', JSON.stringify(list)); } catch(e){}
+}
+
+// Colori disponibili per evidenziare il cliente
+const ROW_COLORS = [
+  { label:'Nessuno', value:'', preview:'#ffffff' },
+  { label:'Giallo',  value:'#fffde6', preview:'#f9e400' },
+  { label:'Verde',   value:'#e8f8e8', preview:'#4caf50' },
+  { label:'Azzurro', value:'#e3f0ff', preview:'#2196f3' },
+  { label:'Rosa',    value:'#fce8f0', preview:'#e91e8c' },
+  { label:'Arancio', value:'#fff3e0', preview:'#ff9800' },
+  { label:'Viola',   value:'#f3e8ff', preview:'#9c27b0' },
+];
+
+function askOperator(){
+  const saved = localStorage.getItem('operatore_corrente');
+  if(saved){ currentOperator = saved; document.getElementById('operatorName').textContent = saved; return; }
+
+  showOperatorDialog();
+}
+
+function showOperatorDialog(){
+  const operatori = getOperatori();
+  const dialog = document.createElement('div');
+  dialog.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.6);z-index:99999;display:flex;align-items:center;justify-content:center;';
+  dialog.innerHTML=`<div style="background:#fff;border-radius:10px;padding:28px 32px;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.3);text-align:center;">
+    <div style="font-size:32px;margin-bottom:8px;">👤</div>
+    <h3 style="font-family:Georgia,serif;font-size:20px;margin:0 0 6px;">Chi sei?</h3>
+    <p style="color:#888;font-size:13px;margin:0 0 16px;">Seleziona il tuo nome per tracciare chi inserisce gli ordini</p>
+    <div id="opList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;">
+      <input id="opNewInput" placeholder="Aggiungi nuovo nome…" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:13px;">
+      <button id="opAddBtn" style="padding:8px 12px;border:1px solid #4a2d6b;border-radius:4px;background:#4a2d6b;color:#fff;cursor:pointer;font-size:13px;">+ Aggiungi</button>
+    </div>
+    <p style="font-size:11px;color:#bbb;margin:0;">Clicca 🗑 per rimuovere un nome dalla lista</p>
+  </div>`;
+  document.body.appendChild(dialog);
+
+  function renderOpList(){
+    const ops = getOperatori();
+    const list = dialog.querySelector('#opList');
+    list.innerHTML = ops.map((n,i)=>`
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button class="op-sel-btn" data-name="${esc(n)}" style="flex:1;padding:10px;border:2px solid #e0e0e0;border-radius:6px;background:#fff;cursor:pointer;font-size:14px;font-weight:600;text-align:left;">${esc(n)}</button>
+        <button class="op-del-btn" data-i="${i}" style="padding:8px;border:1px solid #eee;border-radius:4px;background:#fff;cursor:pointer;font-size:13px;color:#c0392b;">🗑</button>
+      </div>`).join('');
+
+    list.querySelectorAll('.op-sel-btn').forEach(btn=>btn.addEventListener('click',()=>setOp(btn.dataset.name)));
+    list.querySelectorAll('.op-del-btn').forEach(btn=>btn.addEventListener('click',()=>{
+      const ops2 = getOperatori();
+      ops2.splice(+btn.dataset.i, 1);
+      saveOperatori(ops2);
+      renderOpList();
+    }));
+  }
+  renderOpList();
+
+  function setOp(name){
+    currentOperator = name;
+    localStorage.setItem('operatore_corrente', name);
+    document.getElementById('operatorName').textContent = name;
+    dialog.remove();
+  }
+
+  dialog.querySelector('#opAddBtn').addEventListener('click',()=>{
+    const v = dialog.querySelector('#opNewInput').value.trim();
+    if(!v) return;
+    const ops = getOperatori();
+    if(!ops.includes(v)){ ops.push(v); saveOperatori(ops); }
+    dialog.querySelector('#opNewInput').value='';
+    renderOpList();
+  });
+  dialog.querySelector('#opNewInput').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){
+      const v=e.target.value.trim();
+      if(v){ const ops=getOperatori(); if(!ops.includes(v)){ops.push(v);saveOperatori(ops);} e.target.value=''; renderOpList(); }
+    }
+  });
+}
+
+document.getElementById('btnChangeOperator').addEventListener('click', ()=>{
+  localStorage.removeItem('operatore_corrente');
+  currentOperator='';
+  document.getElementById('operatorName').textContent='—';
+  showOperatorDialog();
+});
+
+// ── Filtro data lavorazione in griglia ──
+document.getElementById('gridFilterDateInput').addEventListener('change', function(){
+  gridFilterDate = this.value;
+  renderGrid();
+});
+document.getElementById('gridFilterDateInput').addEventListener('input', function(){
+  gridFilterDate = this.value;
+  renderGrid();
+});
+document.getElementById('btnApplyGridFilter').addEventListener('click', ()=>{
+  gridFilterDate = document.getElementById('gridFilterDateInput').value;
+  renderGrid();
+});
+document.getElementById('btnClearGridFilter').addEventListener('click', ()=>{
+  gridFilterDate='';
+  document.getElementById('gridFilterDateInput').value='';
+  renderGrid();
+});
+
+// ── Init ──
+loadLocal(); // carica dati locali subito (evita schermata vuota)
+cleanEmptySessions();
+ensureSession();
+renderSessionSelector();
+renderGrid();
+renderProduzione();
+renderAnagrafica();
+updateBriocheCounter();
+scheduleAutoBackup(); // avvia backup automatico 8:30 e 17:30
+initFirebase(); // poi sincronizza con Firebase
+askOperator();
+</script>
+</body>
+</html>
