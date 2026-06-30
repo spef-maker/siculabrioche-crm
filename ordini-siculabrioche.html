@@ -632,15 +632,24 @@ function updateBriocheCounter(){
   const ses = getSession();
   const targetDate = ses ? ses.date : '';
 
-  // Somma tutte le brioche di TUTTE le sessioni con la stessa data spedizione
+  // Somma Brioche (imballi) + SABLU (pezzi singoli) con le stesse regole di calcolo:
+  // - Brioscia pz: vale 1
+  // - Mini pz: va diviso per 2
+  // - Paffutella pz: vale 1 (va nelle impastate)
   let ordinateOggi = 0;
   Object.values(orders).forEach(s=>{
     if((s.date||'') !== targetDate) return;
     (s.rows||[]).forEach(row=>{
+      // Brioscia a imballi (112/52/26/GR.8/CAMP.)
       briocheP.imballi.forEach(imb=>{
         const v = parseInt((row.qtys||{})[briocheP.id]?.[imb]||0);
         ordinateOggi += v * briocheP.pz_per_imballo[imb];
       });
+      // SABLU pezzi singoli
+      const sabluB  = parseInt((row.qtys||{})['sablu_brioche']?.['pz']||0);
+      const sabluM  = parseInt((row.qtys||{})['sablu_mini']?.['pz']||0);
+      const sabluPa = parseInt((row.qtys||{})['sablu_paf']?.['pz']||0);
+      ordinateOggi += sabluB + Math.floor(sabluM/2) + sabluPa;
     });
   });
 
