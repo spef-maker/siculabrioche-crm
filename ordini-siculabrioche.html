@@ -630,7 +630,6 @@ function updateBriocheCounter(){
 
   const ses = getSession();
   if(!ses){ return; }
-  const targetDate = ses.date || '';
 
   function sumRows(rows){
     let tot = 0;
@@ -646,12 +645,16 @@ function updateBriocheCounter(){
     return tot;
   }
 
-  // Somma tutte le sessioni con la stessa data spedizione della sessione corrente
-  let ordinateOggi = 0;
-  Object.values(orders).forEach(s=>{
-    if((s.date||'') !== targetDate) return;
-    ordinateOggi += sumRows(s.rows);
-  });
+  // Somma la sessione corrente + eventuali altre sessioni con la stessa data (se impostata)
+  let ordinateOggi = sumRows(ses.rows);
+  const targetDate = ses.date || '';
+  if(targetDate){
+    Object.entries(orders).forEach(([key, s])=>{
+      if(key === currentSession) return; // già sommata sopra
+      if((s.date||'') !== targetDate) return;
+      ordinateOggi += sumRows(s.rows);
+    });
+  }
 
   const totEl = document.getElementById('briocheTotale');
   const ordEl = document.getElementById('briocheOrdinate');
