@@ -639,10 +639,9 @@ function updateBriocheCounter(){
         const v = parseInt((row.qtys||{})[briocheP.id]?.[imb]||0);
         tot += v * briocheP.pz_per_imballo[imb];
       });
-      const sabluB  = parseInt((row.qtys||{})['sablu_brioche']?.['pz']||0);
-      const sabluM  = parseInt((row.qtys||{})['sablu_mini']?.['pz']||0);
-      const sabluPa = parseInt((row.qtys||{})['sablu_paf']?.['pz']||0);
-      tot += sabluB + Math.floor(sabluM/2) + sabluPa;
+      // Solo Brioscia pz SABLU nel contatore — Mini e Paffutella solo nei KG impastatrice
+      const sabluB = parseInt((row.qtys||{})['sablu_brioche']?.['pz']||0);
+      tot += sabluB;
     });
     return tot;
   }
@@ -931,6 +930,7 @@ function renderGrid(){
       ses.rows[ri].qtys[pid][imb] = val;
       // update row total in place (no full re-render)
       updateRowTotals(ri);
+      updateBriocheCounter();
     });
     inp.addEventListener('blur', e=>{
       updateAllTotals();
