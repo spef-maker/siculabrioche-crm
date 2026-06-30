@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Form Clienti Siculabriosce</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+<style>
+:root{
+  --red:#c0392b; --ink:#1a1714; --paper:#f7f4ef;
+  --white:#fff; --line:#e0dbd2; --muted:#888; --green:#2a6e42;
+  --radius:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,'Segoe UI',sans-serif;background:var(--paper);color:var(--ink);font-size:14px;}
+
+/* LOGIN */
+.login-screen{
+  position:fixed;inset:0;background:var(--ink);
+  display:flex;align-items:center;justify-content:center;z-index:9999;
+}
+.login-box{
+  background:#fff;border-radius:12px;padding:40px;width:340px;text-align:center;
+  box-shadow:0 20px 60px rgba(0,0,0,.4);
+}
+.login-box h2{font-family:Georgia,serif;font-size:22px;color:var(--red);margin-bottom:6px;}
+.login-box p{font-size:13px;color:var(--muted);margin-bottom:24px;}
+.login-box input{
+  width:100%;padding:13px 16px;border:2px solid var(--line);border-radius:8px;
+  font-size:16px;text-align:center;letter-spacing:3px;margin-bottom:12px;
+}
+.login-box input:focus{outline:none;border-color:var(--red);}
+.login-box button{
+  width:100%;padding:13px;background:var(--red);color:#fff;border:none;
+  border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;
+}
+.login-box button:hover{background:#9b2218;}
+.login-err{color:var(--red);font-size:13px;margin-top:8px;display:none;}
+
+/* HEADER ADMIN */
+.adm-hdr{
+  background:var(--ink);color:#fff;
+  padding:14px 24px;display:flex;align-items:center;gap:16px;
+}
+.adm-hdr h1{font-family:Georgia,serif;font-size:18px;font-weight:400;flex:1;}
+.save-btn{
+  padding:8px 20px;background:var(--green);color:#fff;
+  border:none;border-radius:6px;font-size:13px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;gap:6px;
+}
+.save-btn:hover{background:#1a5a32;}
+.sync-lbl{font-size:11px;color:rgba(255,255,255,.45);font-family:monospace;letter-spacing:1px;}
+
+/* LAYOUT */
+.adm-body{display:flex;height:calc(100vh - 54px);}
+.sidebar{
+  width:220px;background:var(--white);border-right:1px solid var(--line);
+  overflow-y:auto;flex-shrink:0;
+}
+.sidebar-item{
+  padding:12px 16px;cursor:pointer;font-size:13px;font-weight:600;
+  border-left:3px solid transparent;transition:all .15s;
+  display:flex;align-items:center;gap:8px;
+}
+.sidebar-item:hover{background:#f5f5f5;}
+.sidebar-item.active{color:var(--red);border-left-color:var(--red);background:var(--paper);}
+.sidebar-divider{padding:8px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#bbb;}
+
+.main-panel{flex:1;overflow-y:auto;padding:24px;}
+
+/* SEZIONI */
+.section{display:none;}
+.section.active{display:block;}
+.section-title{
+  font-family:Georgia,serif;font-size:20px;font-weight:400;
+  margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--line);
+}
+
+/* CARDS */
+.card{
+  background:var(--white);border:1px solid var(--line);
+  border-radius:var(--radius);padding:20px;margin-bottom:16px;
+}
+.card h3{font-size:14px;font-weight:700;margin-bottom:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;}
+
+/* FORM ELEMENTS */
+label.lbl{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+input[type=text],input[type=password],textarea,select{
+  width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;
+  font-size:14px;font-family:inherit;background:#fff;color:var(--ink);
+}
+input[type=text]:focus,textarea:focus,select:focus{outline:none;border-color:var(--red);}
+textarea{resize:vertical;min-height:70px;line-height:1.5;}
+input[type=color]{
+  width:48px;height:38px;border:1px solid var(--line);border-radius:6px;
+  padding:2px;cursor:pointer;background:#fff;
+}
+.field-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:14px;}
+.field-row > div{flex:1;}
+.field-row label.lbl{margin-bottom:5px;}
+
+/* UPLOAD AREA */
+.upload-area{
+  border:2px dashed var(--line);border-radius:8px;padding:20px;
+  text-align:center;cursor:pointer;transition:border-color .15s;
+  background:#fafaf8;
+}
+.upload-area:hover{border-color:var(--red);}
+.upload-area.drag{border-color:var(--red);background:#fdf0ee;}
+.upload-preview{
+  width:100%;max-height:160px;object-fit:contain;
+  border-radius:6px;margin-top:10px;display:none;
+}
+.upload-txt{font-size:13px;color:var(--muted);margin-top:6px;}
+.upload-icon{font-size:32px;}
+
+/* PRODOTTI */
+.prod-admin-card{
+  background:var(--white);border:1px solid var(--line);border-radius:var(--radius);
+  overflow:hidden;margin-bottom:12px;
+}
+.prod-admin-hdr{
+  padding:12px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;
+  background:#fafaf8;border-bottom:1px solid var(--line);
+}
+.prod-admin-hdr:hover{background:#f5f5f5;}
+.prod-admin-hdr .pname{font-weight:700;font-size:14px;flex:1;}
+.prod-admin-body{padding:16px;display:none;}
+.prod-admin-body.open{display:block;}
+.prod-color-preview{
+  width:100%;height:80px;border-radius:6px;margin-bottom:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:#666;border:1px solid var(--line);
+  font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  transition:background .15s;
+}
+.img-preview-small{
+  width:100%;height:100px;object-fit:cover;border-radius:6px;
+  margin-top:8px;display:none;border:1px solid var(--line);
+}
+
+/* ANTEPRIMA */
+.preview-frame{
+  width:375px;height:calc(100vh - 100px);border:none;
+  border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);
+  position:sticky;top:0;
+}
+.preview-wrap{display:flex;gap:24px;}
+.preview-wrap .main-panel-inner{flex:1;}
+.preview-col{width:395px;flex-shrink:0;}
+.preview-label{font-size:11px;color:var(--muted);text-align:center;margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+
+/* TOGGLE */
+.toggle{display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:12px;}
+.toggle input[type=checkbox]{width:38px;height:22px;-webkit-appearance:none;background:#ddd;border-radius:11px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.toggle input[type=checkbox]:checked{background:var(--green);}
+.toggle input[type=checkbox]::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.toggle input[type=checkbox]:checked::after{left:18px;}
+.toggle span{font-size:13px;font-weight:600;}
+
+/* BADGE SALVATO */
+.saved-badge{
+  display:inline-block;background:var(--green);color:#fff;
+  padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;
+  margin-left:12px;opacity:0;transition:opacity .3s;
+}
+.saved-badge.vis{opacity:1;}
+
+/* BTN */
+.btn-sm{
+  padding:7px 14px;background:var(--red);color:#fff;border:none;
+  border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;
+}
+.btn-sm:hover{background:#9b2218;}
+.btn-outline{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;}
+.btn-outline:hover{background:#f5f5f5;}
+
+/* PASSWORD CHANGE */
+.pwd-section{background:#fff8e1;border:1px solid #f9c74f;border-radius:8px;padding:16px;margin-top:16px;}
+
+.tag{display:inline-block;background:#eee;border-radius:4px;padding:2px 7px;font-size:11px;font-family:monospace;color:#555;}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN ══ -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div style="font-size:48px;margin-bottom:8px;">🔐</div>
+    <h2>Pannello Admin</h2>
+    <p>Form Ordine Clienti · Siculabriosce</p>
+    <input type="password" id="pwdInput" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">Accedi</button>
+    <div class="login-err" id="loginErr">Password errata. Riprova.</div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
+<header class="adm-hdr" id="adminUI" style="display:none;">
+  <h1>🛠 Admin — Form Clienti Siculabriosce</h1>
+  <span class="saved-badge" id="savedBadge">✓ Salvato</span>
+  <span class="sync-lbl" id="syncLbl">–</span>
+  <button class="save-btn" onclick="salvaConfig()">💾 Salva e pubblica</button>
+</header>
+
+<!-- ══ BODY ══ -->
+<div class="adm-body" id="adminBody" style="display:none;">
+
+  <!-- Sidebar navigazione -->
+  <nav class="sidebar">
+    <div class="sidebar-divider">Generale</div>
+    <div class="sidebar-item active" data-sec="generale" onclick="showSec(this)">🏠 Intestazione</div>
+    <div class="sidebar-item" data-sec="grafica" onclick="showSec(this)">🎨 Colori e sfondo</div>
+    <div class="sidebar-divider">Prodotti</div>
+    <div class="sidebar-item" data-sec="brioche" onclick="showSec(this)">🥐 Brioscia</div>
+    <div class="sidebar-item" data-sec="mini" onclick="showSec(this)">🥖 Mini</div>
+    <div class="sidebar-item" data-sec="paffutella" onclick="showSec(this)">🟢 Paffutella</div>
+    <div class="sidebar-item" data-sec="panzotta" onclick="showSec(this)">🟣 Panzotta</div>
+    <div class="sidebar-item" data-sec="choco" onclick="showSec(this)">🍫 Choco</div>
+    <div class="sidebar-item" data-sec="grosse48" onclick="showSec(this)">🔶 Grosse 105g</div>
+    <div class="sidebar-item" data-sec="minipaf" onclick="showSec(this)">🟩 Mini Paffutelle</div>
+    <div class="sidebar-item" data-sec="babybrioche" onclick="showSec(this)">🧡 Baby Briosce</div>
+    <div class="sidebar-item" data-sec="babypaf" onclick="showSec(this)">💚 Baby Paffutelle</div>
+    <div class="sidebar-item" data-sec="lat" onclick="showSec(this)">🥛 Latticini</div>
+    <div class="sidebar-item" data-sec="pura" onclick="showSec(this)">🌿 Pure</div>
+    <div class="sidebar-item" data-sec="paste" onclick="showSec(this)">🍪 Paste e Frutta</div>
+    <div class="sidebar-divider">Sistema</div>
+    <div class="sidebar-item" data-sec="impostazioni" onclick="showSec(this)">⚙️ Impostazioni</div>
+  </nav>
+
+  <!-- Main content -->
+  <div class="main-panel">
+
+    <!-- ── SEZIONE GENERALE ── -->
+    <div class="section active" id="sec-generale">
+      <div class="section-title">🏠 Intestazione del form</div>
+
+      <div class="card">
+        <h3>Logo</h3>
+        <div class="upload-area" id="logoUpload" onclick="triggerUpload('logoFile')" ondragover="dragOver(event,this)" ondrop="dropFile(event,'logo',this)">
+          <div class="upload-icon">🖼</div>
+          <div class="upload-txt">Clicca o trascina il tuo logo qui<br><span style="font-size:11px;color:#bbb;">PNG, JPG, SVG · max 2MB</span></div>
+          <img class="upload-preview" id="logoPreview">
+        </div>
+        <input type="file" id="logoFile" accept="image/*" style="display:none;" onchange="handleImg(this,'logo','logoPreview','logoUpload')">
+        <div style="margin-top:12px;">
+          <label class="lbl">Oppure inserisci l'URL del logo</label>
+          <input type="text" id="logoUrl" placeholder="https://esempio.com/logo.png" oninput="previewUrl(this.value,'logoPreview','logoUpload')">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Testi intestazione</h3>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Testo topbar (striscia in cima)</label>
+            <input type="text" id="topbarTxt" placeholder="Leader europeo nella produzione di briosce...">
+          </div>
+        </div>
+        <div>
+          <label class="lbl">Sottotitolo sotto il logo</label>
+          <input type="text" id="subtitleTxt" placeholder="Modulo ordine clienti">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Testo benvenuto (pagina prodotti)</h3>
+        <textarea id="welcomeTxt" placeholder="Tocca un prodotto per espanderlo e scegliere la quantità 👇"></textarea>
+        <div style="font-size:11px;color:#bbb;margin-top:6px;">Puoi usare emoji. Il nome del cliente viene aggiunto automaticamente all'inizio.</div>
+      </div>
+    </div>
+
+    <!-- ── SEZIONE GRAFICA ── -->
+    <div class="section" id="sec-grafica">
+      <div class="section-title">🎨 Colori e grafica</div>
+
+      <div class="card">
+        <h3>Colori principali</h3>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Colore topbar</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="colorTopbar" value="#c0392b" oninput="aggiornaCss()">
+              <input type="text" id="colorTopbarTxt" value="#c0392b" style="flex:1;" oninput="sincronizzaColore('colorTopbar',this)">
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Colore pulsanti e accenti</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="colorAccent" value="#c0392b" oninput="aggiornaCss()">
+              <input type="text" id="colorAccentTxt" value="#c0392b" style="flex:1;" oninput="sincronizzaColore('colorAccent',this)">
+            </div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Colore sfondo pagina</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="colorBg" value="#f7f4ef" oninput="aggiornaCss()">
+              <input type="text" id="colorBgTxt" value="#f7f4ef" style="flex:1;" oninput="sincronizzaColore('colorBg',this)">
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Colore divisore header</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="colorDivider" value="#c49a2a" oninput="aggiornaCss()">
+              <input type="text" id="colorDividerTxt" value="#c49a2a" style="flex:1;" oninput="sincronizzaColore('colorDivider',this)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Step bar (barra 1-2-3)</h3>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Colore step attivo</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="colorStep" value="#c0392b" oninput="aggiornaCss()">
+              <input type="text" id="colorStepTxt" value="#c0392b" style="flex:1;" oninput="sincronizzaColore('colorStep',this)">
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Colore step completato</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="colorStepDone" value="#2a6e42" oninput="aggiornaCss()">
+              <input type="text" id="colorStepDoneTxt" value="#2a6e42" style="flex:1;" oninput="sincronizzaColore('colorStepDone',this)">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SEZIONI PRODOTTI ── -->
+    <!-- Template generato via JS per ogni prodotto -->
+    <div id="prodSections"></div>
+
+    <!-- ── IMPOSTAZIONI ── -->
+    <div class="section" id="sec-impostazioni">
+      <div class="section-title">⚙️ Impostazioni sistema</div>
+
+      <div class="card">
+        <h3>Contatti aziendali nel form</h3>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Numero WhatsApp (con prefisso, senza +)</label>
+            <input type="text" id="settWa" placeholder="393204228628">
+          </div>
+          <div>
+            <label class="lbl">Email ordini</label>
+            <input type="text" id="settEmail" placeholder="ordini@siculabriosce.com">
+          </div>
+        </div>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Telefono (visualizzato nel footer)</label>
+            <input type="text" id="settTel" placeholder="(+39) 095 805734">
+          </div>
+          <div>
+            <label class="lbl">Indirizzo (footer)</label>
+            <input type="text" id="settAddr" placeholder="Acireale (CT)">
+          </div>
+        </div>
+      </div>
+
+      <div class="pwd-section">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:12px;color:#7a5f00;">🔐 Cambia password admin</h3>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Nuova password</label>
+            <input type="password" id="newPwd1" placeholder="Nuova password">
+          </div>
+          <div>
+            <label class="lbl">Conferma password</label>
+            <input type="password" id="newPwd2" placeholder="Ripeti la password">
+          </div>
+        </div>
+        <button class="btn-sm" onclick="cambiaPwd()">Aggiorna password</button>
+        <div id="pwdMsg" style="font-size:12px;margin-top:8px;"></div>
+      </div>
+    </div>
+
+  </div><!-- /main-panel -->
+</div><!-- /adm-body -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-app-compat.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.23.0/firebase-database-compat.min.js"></script>
+<script>
+// ══ FIREBASE ══
+const firebaseConfig = {
+  apiKey:"AIzaSyB08NmunQbwid4W4bZIBdAE3Kd-0P5Mih8",
+  authDomain:"turni-lavoro-543c6.firebaseapp.com",
+  databaseURL:"https://turni-lavoro-543c6-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"turni-lavoro-543c6",
+  storageBucket:"turni-lavoro-543c6.firebasestorage.app",
+  messagingSenderId:"360806251809",
+  appId:"1:360806251809:web:e75e583630d2d9d14b1260"
+};
+
+let db = null;
+
+// ══ PASSWORD ══
+const DEFAULT_PWD = 'Sicula2024!';
+function getPwd(){ try{ return localStorage.getItem('adm_pwd') || DEFAULT_PWD; } catch(e){ return DEFAULT_PWD; } }
+
+function doLogin(){
+  const v = document.getElementById('pwdInput').value;
+  if(v === getPwd()){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminUI').style.display = 'flex';
+    document.getElementById('adminBody').style.display = 'flex';
+    initAdmin();
+  } else {
+    document.getElementById('loginErr').style.display = 'block';
+    document.getElementById('pwdInput').value = '';
+    document.getElementById('pwdInput').focus();
+  }
+}
+
+function cambiaPwd(){
+  const p1 = document.getElementById('newPwd1').value;
+  const p2 = document.getElementById('newPwd2').value;
+  const msg = document.getElementById('pwdMsg');
+  if(!p1 || p1.length < 6){ msg.style.color='#c0392b'; msg.textContent='La password deve avere almeno 6 caratteri.'; return; }
+  if(p1 !== p2){ msg.style.color='#c0392b'; msg.textContent='Le password non coincidono.'; return; }
+  try{ localStorage.setItem('adm_pwd', p1); }catch(e){}
+  msg.style.color='#2a6e42'; msg.textContent='✓ Password aggiornata!';
+  document.getElementById('newPwd1').value='';
+  document.getElementById('newPwd2').value='';
+}
+
+// ══ PRODOTTI CONFIG ══
+const PRODOTTI = [
+  { id:'brioche',    nome:'BRIOSCIA col tuppo',    emoji:'🥐', defColor:'#fff8dc', defBorder:'#d4a800', defDesc:'La classica brioscia siciliana col suo caratteristico tuppo' },
+  { id:'mini',       nome:'MINI briosce',           emoji:'🥖', defColor:'#fde8e6', defBorder:'#c0392b', defDesc:'Versione mignon della brioscia siciliana' },
+  { id:'paffutella', nome:'PAFFUTELLA',             emoji:'🟢', defColor:'#d5f5e3', defBorder:'#1a7a4a', defDesc:'Soffice e rotonda, senza il tuppo' },
+  { id:'panzotta',   nome:'PANZOTTA',               emoji:'🟣', defColor:'#f0e5fa', defBorder:'#7e3bb5', defDesc:'Grande e tonda, ideale per farciture generose' },
+  { id:'choco',      nome:'BRIOSCIA al cioccolato', emoji:'🍫', defColor:'#f5ece6', defBorder:'#6b3a1f', defDesc:'Impasto al cacao con gocce di cioccolato' },
+  { id:'grosse48',   nome:'GROSSE 105g',            emoji:'🔶', defColor:'#fdf0d0', defBorder:'#b87c1a', defDesc:'Formato maxi da 105g' },
+  { id:'minipaf',    nome:'MINI PAFFUTELLE',        emoji:'🟩', defColor:'#d0f0e0', defBorder:'#27a060', defDesc:'Paffutella in formato mini' },
+  { id:'babybrioche',nome:'BABY BRIOSCE',           emoji:'🧡', defColor:'#fde0d0', defBorder:'#e06030', defDesc:'Briosce in formato baby' },
+  { id:'babypaf',    nome:'BABY PAFFUTELLE',        emoji:'💚', defColor:'#c8ecd8', defBorder:'#208050', defDesc:'Paffutella in formato baby' },
+  { id:'lat',        nome:'LATTICINI',              emoji:'🥛', defColor:'#e3edf8', defBorder:'#1565a8', defDesc:'Mandorla, Pistacchio, Caffè, Nocciola — venduti a pezzo' },
+  { id:'pura',       nome:'PURE',                   emoji:'🌿', defColor:'#c8e6cc', defBorder:'#2d6e3a', defDesc:'Pistacchio, Mandorla, Nocciola — vendute a pezzo' },
+  { id:'paste',      nome:'PASTE e FRUTTA MARTORANA',emoji:'🍪',defColor:'#fef0d8', defBorder:'#d4821a', defDesc:'Paste di Mandorla (conf. 6) e Frutta Martorana — al pezzo' },
+];
+
+// ══ CONFIGURAZIONE ══
+let cfg = {};
+
+function defaultCfg(){
+  const c = {
+    logo: 'https://www.siculabriosce.com/wp-content/uploads/2024/06/LOGO-SICULA-BRIOSCE-1.png',
+    logoBase64: '',
+    topbarTxt: 'Leader europeo nella produzione di briosce siciliane artigianali',
+    subtitleTxt: 'Modulo ordine clienti',
+    welcomeTxt: 'Tocca un prodotto per espanderlo e scegliere la quantità 👇',
+    colorTopbar: '#c0392b', colorAccent: '#c0392b',
+    colorBg: '#f7f4ef', colorDivider: '#c49a2a',
+    colorStep: '#c0392b', colorStepDone: '#2a6e42',
+    wa: '393204228628', email: 'ordini@siculabriosce.com',
+    tel: '(+39) 095 805734', addr: 'Acireale (CT)',
+    prodotti: {}
+  };
+  PRODOTTI.forEach(p=>{
+    c.prodotti[p.id] = {
+      visible: true,
+      nome: p.nome, desc: p.defDesc,
+      sfondo: p.defColor, bordo: p.defBorder,
+      img: '', imgBase64: ''
+    };
+  });
+  return c;
+}
+
+// ══ INIT ══
+function initAdmin(){
+  buildProdSections();
+
+  // Firebase
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+    document.getElementById('syncLbl').textContent = 'Connessione…';
+    db.ref('ordini_siculabrioche/v1/form_config').once('value', snap=>{
+      const data = snap.val();
+      cfg = data ? Object.assign(defaultCfg(), data) : defaultCfg();
+      // Merge prodotti
+      if(data && data.prodotti){
+        PRODOTTI.forEach(p=>{
+          cfg.prodotti[p.id] = Object.assign(
+            defaultCfg().prodotti[p.id],
+            data.prodotti[p.id] || {}
+          );
+        });
+      }
+      caricaUiDaCfg();
+      document.getElementById('syncLbl').textContent = 'Connesso ✓';
+    });
+  } catch(e){
+    cfg = defaultCfg();
+    caricaUiDaCfg();
+    document.getElementById('syncLbl').textContent = 'Offline';
+  }
+}
+
+// ══ BUILD SEZIONI PRODOTTO ══
+function buildProdSections(){
+  const container = document.getElementById('prodSections');
+  container.innerHTML = PRODOTTI.map(p => `
+    <div class="section" id="sec-${p.id}">
+      <div class="section-title">${p.emoji} ${p.nome}</div>
+
+      <div class="card">
+        <h3>Visibilità</h3>
+        <label class="toggle">
+          <input type="checkbox" id="${p.id}-visible" checked onchange="aggiornaProd('${p.id}')">
+          <span>Mostra questo prodotto nel form</span>
+        </label>
+      </div>
+
+      <div class="card">
+        <h3>Nome e descrizione</h3>
+        <div style="margin-bottom:12px;">
+          <label class="lbl">Nome prodotto</label>
+          <input type="text" id="${p.id}-nome" value="${p.nome}" oninput="aggiornaProd('${p.id}')">
+        </div>
+        <div>
+          <label class="lbl">Descrizione (mostrata sotto il nome)</label>
+          <textarea id="${p.id}-desc" oninput="aggiornaProd('${p.id}')">${p.defDesc}</textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Colore sfondo categoria</h3>
+        <div class="prod-color-preview" id="${p.id}-preview" style="background:${p.defColor};border-left:4px solid ${p.defBorder};">
+          ${p.emoji} ${p.nome}
+        </div>
+        <div class="field-row">
+          <div>
+            <label class="lbl">Colore sfondo</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="${p.id}-sfondo" value="${p.defColor}" oninput="aggiornaPrevProd('${p.id}')">
+              <input type="text" id="${p.id}-sfondoTxt" value="${p.defColor}" style="flex:1;" oninput="sincronizzaColore('${p.id}-sfondo',this);aggiornaPrevProd('${p.id}')">
+            </div>
+          </div>
+          <div>
+            <label class="lbl">Colore bordo / accento</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="color" id="${p.id}-bordo" value="${p.defBorder}" oninput="aggiornaPrevProd('${p.id}')">
+              <input type="text" id="${p.id}-bordoTxt" value="${p.defBorder}" style="flex:1;" oninput="sincronizzaColore('${p.id}-bordo',this);aggiornaPrevProd('${p.id}')">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Immagine prodotto</h3>
+        <div class="upload-area" id="${p.id}-imgArea" onclick="triggerUpload('${p.id}-imgFile')" ondragover="dragOver(event,this)" ondrop="dropFile(event,'${p.id}-img',this)">
+          <div class="upload-icon">${p.emoji}</div>
+          <div class="upload-txt">Clicca o trascina la foto del prodotto<br><span style="font-size:11px;color:#bbb;">JPG, PNG · max 2MB · consigliato 800×500</span></div>
+          <img class="upload-preview" id="${p.id}-imgPreview">
+        </div>
+        <input type="file" id="${p.id}-imgFile" accept="image/*" style="display:none;" onchange="handleImg(this,'${p.id}-img','${p.id}-imgPreview','${p.id}-imgArea')">
+        <div style="margin-top:10px;">
+          <label class="lbl">Oppure URL immagine</label>
+          <input type="text" id="${p.id}-imgUrl" placeholder="https://..." oninput="previewUrl(this.value,'${p.id}-imgPreview','${p.id}-imgArea');aggiornaProd('${p.id}')">
+        </div>
+        <button class="btn-outline" style="margin-top:10px;" onclick="rimuoviImg('${p.id}')">✕ Rimuovi immagine</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ══ CARICA UI DA CONFIG ══
+function caricaUiDaCfg(){
+  // Generale
+  const logoUrl = cfg.logoBase64 || cfg.logo || '';
+  document.getElementById('logoUrl').value = cfg.logo || '';
+  if(logoUrl){ mostraPreview('logoPreview','logoUpload',logoUrl); }
+
+  document.getElementById('topbarTxt').value = cfg.topbarTxt || '';
+  document.getElementById('subtitleTxt').value = cfg.subtitleTxt || '';
+  document.getElementById('welcomeTxt').value = cfg.welcomeTxt || '';
+
+  // Colori
+  ['colorTopbar','colorAccent','colorBg','colorDivider','colorStep','colorStepDone'].forEach(id=>{
+    const v = cfg[id] || document.getElementById(id).value;
+    document.getElementById(id).value = v;
+    document.getElementById(id+'Txt').value = v;
+  });
+
+  // Impostazioni
+  document.getElementById('settWa').value = cfg.wa || '';
+  document.getElementById('settEmail').value = cfg.email || '';
+  document.getElementById('settTel').value = cfg.tel || '';
+  document.getElementById('settAddr').value = cfg.addr || '';
+
+  // Prodotti
+  PRODOTTI.forEach(p=>{
+    const pc = cfg.prodotti[p.id] || {};
+    const vis = document.getElementById(`${p.id}-visible`);
+    if(vis) vis.checked = pc.visible !== false;
+    const nEl = document.getElementById(`${p.id}-nome`);
+    if(nEl) nEl.value = pc.nome || p.nome;
+    const dEl = document.getElementById(`${p.id}-desc`);
+    if(dEl) dEl.value = pc.desc || p.defDesc;
+
+    const sf = pc.sfondo || p.defColor;
+    const bo = pc.bordo || p.defBorder;
+    const sfEl = document.getElementById(`${p.id}-sfondo`);
+    const sfTEl = document.getElementById(`${p.id}-sfondoTxt`);
+    const boEl = document.getElementById(`${p.id}-bordo`);
+    const boTEl = document.getElementById(`${p.id}-bordoTxt`);
+    if(sfEl){ sfEl.value=sf; sfTEl.value=sf; }
+    if(boEl){ boEl.value=bo; boTEl.value=bo; }
+    aggiornaPrevProd(p.id);
+
+    // Immagine
+    const imgSrc = pc.imgBase64 || pc.img || '';
+    const urlEl = document.getElementById(`${p.id}-imgUrl`);
+    if(urlEl) urlEl.value = pc.img || '';
+    if(imgSrc) mostraPreview(`${p.id}-imgPreview`, `${p.id}-imgArea`, imgSrc);
+  });
+}
+
+// ══ RACCOLTA CONFIG ══
+function raccogliCfg(){
+  cfg.logo = document.getElementById('logoUrl').value.trim();
+  cfg.topbarTxt = document.getElementById('topbarTxt').value.trim();
+  cfg.subtitleTxt = document.getElementById('subtitleTxt').value.trim();
+  cfg.welcomeTxt = document.getElementById('welcomeTxt').value.trim();
+  ['colorTopbar','colorAccent','colorBg','colorDivider','colorStep','colorStepDone'].forEach(id=>{ cfg[id] = document.getElementById(id).value; });
+  cfg.wa    = document.getElementById('settWa').value.trim();
+  cfg.email = document.getElementById('settEmail').value.trim();
+  cfg.tel   = document.getElementById('settTel').value.trim();
+  cfg.addr  = document.getElementById('settAddr').value.trim();
+
+  if(!cfg.prodotti) cfg.prodotti = {};
+  PRODOTTI.forEach(p=>{
+    const vis = document.getElementById(`${p.id}-visible`);
+    const imgUrl = document.getElementById(`${p.id}-imgUrl`)?.value.trim() || '';
+    cfg.prodotti[p.id] = {
+      visible: vis ? vis.checked : true,
+      nome:  document.getElementById(`${p.id}-nome`)?.value.trim() || p.nome,
+      desc:  document.getElementById(`${p.id}-desc`)?.value.trim() || p.defDesc,
+      sfondo: document.getElementById(`${p.id}-sfondo`)?.value || p.defColor,
+      bordo:  document.getElementById(`${p.id}-bordo`)?.value || p.defBorder,
+      img: imgUrl,
+      imgBase64: cfg.prodotti[p.id]?.imgBase64 || '',
+    };
+  });
+  return cfg;
+}
+
+// ══ SALVA ══
+function salvaConfig(){
+  raccogliCfg();
+  if(db){
+    document.getElementById('syncLbl').textContent = 'Salvataggio…';
+    db.ref('ordini_siculabrioche/v1/form_config').set(cfg)
+      .then(()=>{
+        document.getElementById('syncLbl').textContent = 'Salvato ✓';
+        flashSaved();
+      })
+      .catch(()=>{ document.getElementById('syncLbl').textContent = 'Errore salvataggio'; });
+  } else {
+    try{ localStorage.setItem('form_cfg', JSON.stringify(cfg)); }catch(e){}
+    flashSaved();
+  }
+}
+
+function flashSaved(){
+  const b = document.getElementById('savedBadge');
+  b.classList.add('vis');
+  setTimeout(()=>b.classList.remove('vis'), 2500);
+}
+
+// ══ NAVIGAZIONE ══
+function showSec(item){
+  document.querySelectorAll('.sidebar-item').forEach(i=>i.classList.remove('active'));
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  item.classList.add('active');
+  const id = 'sec-' + item.dataset.sec;
+  const sec = document.getElementById(id);
+  if(sec) sec.classList.add('active');
+}
+
+// ══ UPLOAD IMMAGINI ══
+function triggerUpload(inputId){ document.getElementById(inputId).click(); }
+
+function handleImg(input, key, previewId, areaId){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 2.5*1024*1024){ alert('File troppo grande. Massimo 2MB.'); return; }
+  const reader = new FileReader();
+  reader.onload = e=>{
+    const b64 = e.target.result;
+    mostraPreview(previewId, areaId, b64);
+    // Salva base64 in cfg
+    if(key === 'logo'){
+      cfg.logoBase64 = b64;
+    } else {
+      const prodId = key.replace('-img','');
+      if(!cfg.prodotti) cfg.prodotti = {};
+      if(!cfg.prodotti[prodId]) cfg.prodotti[prodId] = {};
+      cfg.prodotti[prodId].imgBase64 = b64;
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+function mostraPreview(previewId, areaId, src){
+  const img = document.getElementById(previewId);
+  const area = document.getElementById(areaId);
+  if(img){ img.src=src; img.style.display='block'; }
+  if(area){ area.querySelector('.upload-icon').style.display='none'; area.querySelector('.upload-txt').style.display='none'; }
+}
+
+function previewUrl(url, previewId, areaId){
+  if(!url) return;
+  mostraPreview(previewId, areaId, url);
+}
+
+function rimuoviImg(prodId){
+  if(!confirm('Rimuovere l\'immagine da questo prodotto?')) return;
+  if(cfg.prodotti && cfg.prodotti[prodId]){
+    cfg.prodotti[prodId].img = '';
+    cfg.prodotti[prodId].imgBase64 = '';
+  }
+  const previewId = `${prodId}-imgPreview`;
+  const areaId = `${prodId}-imgArea`;
+  const img = document.getElementById(previewId);
+  const area = document.getElementById(areaId);
+  if(img){ img.src=''; img.style.display='none'; }
+  if(area){ area.querySelector('.upload-icon').style.display='block'; area.querySelector('.upload-txt').style.display='block'; }
+  document.getElementById(`${prodId}-imgUrl`).value = '';
+}
+
+// Drag & drop
+function dragOver(e, area){ e.preventDefault(); area.classList.add('drag'); }
+function dropFile(e, key, area){
+  e.preventDefault(); area.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/')) return;
+  const prodId = key.replace('-img','');
+  const previewId = key === 'logo' ? 'logoPreview' : `${prodId}-imgPreview`;
+  const fakeInput = { files:[file] };
+  handleImg(fakeInput, key, previewId, area.id);
+}
+
+// ══ SINCRONIZZA COLORI ══
+function sincronizzaColore(colorInputId, txtInput){
+  const v = txtInput.value;
+  if(/^#[0-9a-fA-F]{6}$/.test(v)){
+    const el = document.getElementById(colorInputId);
+    if(el) el.value = v;
+  }
+}
+function aggiornaCss(){ /* anteprima live futura */ }
+function aggiornaPrevProd(prodId){
+  const sf = document.getElementById(`${prodId}-sfondo`)?.value || '#eee';
+  const bo = document.getElementById(`${prodId}-bordo`)?.value || '#999';
+  const prev = document.getElementById(`${prodId}-preview`);
+  if(prev){ prev.style.background=sf; prev.style.borderLeft=`4px solid ${bo}`; }
+  // sync txt
+  const sfTxt = document.getElementById(`${prodId}-sfondoTxt`);
+  const boTxt = document.getElementById(`${prodId}-bordoTxt`);
+  if(sfTxt && document.getElementById(`${prodId}-sfondo`)) sfTxt.value = document.getElementById(`${prodId}-sfondo`).value;
+  if(boTxt && document.getElementById(`${prodId}-bordo`)) boTxt.value = document.getElementById(`${prodId}-bordo`).value;
+}
+function aggiornaProd(prodId){ /* aggiornamento live */ }
+</script>
+</body>
+</html>
